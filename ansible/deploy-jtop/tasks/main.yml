@@ -1,0 +1,36 @@
+---
+# tasks file for deploy-jtop
+
+- name: Make sure hybris has a bin dir
+  file: 
+    path: /home/hybris/bin
+    state: directory
+    owner: hybris
+    group: hybris
+    mode: 0755
+
+- name: Upload jtop
+  copy:
+    dest: /home/hybris/bin/jtop
+    owner: hybris
+    group: hybris
+    mode: 0700
+    force: yes
+    src: big-files-not-in-git/jtop
+
+- name: Upload jtop ignore class template
+  template:
+    dest: /home/hybris/.jtop-exclude
+    owner: hybris
+    group: hybris
+    mode: 0700
+    force: yes
+    src: jtop-class-ignore-list.j2
+
+- name: Make jcmd avalible
+  file: 
+    src: /usr/lib/sun/current/bin/jcmd
+    dest: /usr/bin/jcmd
+    owner: hybris
+    group: hybris
+    state: link

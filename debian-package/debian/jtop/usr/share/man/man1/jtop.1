@@ -1,0 +1,52 @@
+.TH "JTOP" "1" "2018" "jtop 1.0.0" "Utils"
+.SH "NAME"
+jtop \- java process viewer
+.SH "SYNOPSIS"
+.LP 
+.B jtop [\fI\-dChusv\fR]
+.SH "DESCRIPTION"
+.LP 
+jtop is a free (GPL) ncurses-based java process viewer for Linux.
+.LP
+It is similar to top, but allows you to see the java class a thread is executing.
+You can also see which threads are blocking other threads, and how much time they 
+are spending on the cpu. 
+.SH "COMMAND-LINE OPTIONS"
+.TP
+\fB\-p \-\-pid PID\fR
+Show the java process identified by PID
+.TP
+\fB\-s \-\-sort\-key COLUMN\fR
+Sort by this column (use \-\-sort\-key help for a column list)
+.TP
+\fB\-v \-\-verbose\fR
+Debug output
+.TP
+\fB\-V \-\-version
+Output version information and exit
+.PP
+.br 
+.SH "INTERACTIVE COMMANDS"
+.LP 
+The following commands are supported while in jtop:
+.LP 
+.TP 5
+.B g
+Get a new java stacktrace and update each thread's current command.
+.TP
+.B t
+Toggle between controlling the stack window or the top window.
+
+.SH "CONFIG FILE"
+.LP 
+to control which java class jtop should filter out, the configuration 
+file ~/.jtop-exclude can be updated adding a class or package per line.
+for example "com.sun" can be added to exclude all com.sun class whilst 
+filter mode is active.
+
+.SH "SEE ALSO"
+proc(5), top(1), jstack(1), jcmd(1)
+
+.SH "AUTHORS"
+.LP 
+jtop is developed by Michael Jones <mj@mikejonesey.co.uk>.

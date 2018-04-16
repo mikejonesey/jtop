@@ -1,0 +1,16 @@
+Source: jtop
+VCS-Git: https://github.com/mikejonesey/jtop
+VCS-Browser: https://github.com/mikejonesey/jtop
+Section: devel
+Priority: optional
+Maintainer: Michael Jones <mj@mikejonesey.co.uk>
+Standards-Version: 3.9.4
+Homepage: http://www.mikejonesey.co.uk/general/jtop
+
+Package: jtop
+Architecture: any
+Priority: optional
+Multi-Arch: allowed
+Description: top like program to monitor java
+ jtop enables real time monitoring of local java applications.
+

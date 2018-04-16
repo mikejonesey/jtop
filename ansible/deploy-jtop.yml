@@ -1,0 +1,15 @@
+---
+##################################################
+#
+# example: ansible-playbook -i inventory/client/client-env deploy-jop.yml
+# 
+##################################################
+
+# Install jtop on server...
+- hosts: hybris
+  become: yes
+  become_method: sudo
+  become_user: root
+  roles:
+    - deploy-jtop
+  any_errors_fatal: True

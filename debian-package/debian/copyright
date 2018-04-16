@@ -1,0 +1,9 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: jtop
+Upstream-Contact: Michael Jones <mj@mikejonesey.co.uk>
+Source: https://github.com/mikejonesey/jtop
+Disclaimer: jtop is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+Comment: optional.
+License: GNU General Public License 2.0
+  /usr/share/common-licenses/GPL-2
+Copyright: Copyright 2018 Michael Jones

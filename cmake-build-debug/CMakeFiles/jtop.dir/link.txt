@@ -1,0 +1,1 @@
+/usr/bin/cc -g  -rdynamic CMakeFiles/jtop.dir/jtop.c.o CMakeFiles/jtop.dir/topWindow.c.o CMakeFiles/jtop.dir/procData.c.o CMakeFiles/jtop.dir/jvmData.c.o CMakeFiles/jtop.dir/stackWindow.c.o CMakeFiles/jtop.dir/bufferFun.c.o CMakeFiles/jtop.dir/classcpuWindow.c.o  -o jtop -lcurses -lpthread 
