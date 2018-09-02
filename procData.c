@@ -67,10 +67,11 @@ void getStat(char *javapid){
                 char proc_stime[100];
 
                 int cnt_proc_startime=0;
-                char proc_startime[100];
+                char proc_startime[1000];
+                memset(proc_startime, 0, sizeof(proc_startime));
                 if(tstat_txt&&strstr(tstat_txt," ")){
                     for(int filei=0; filei<512; filei++){
-                        if (space_count > 21||tstat_txt[filei]=='\0') {
+                        if (space_count > 22||tstat_txt[filei]=='\0') {
                             break;
                         }
                         if (tstat_txt[filei] == ' ') {
@@ -188,8 +189,8 @@ void getStat(char *javapid){
                     memset(proc_majflt, 0, sizeof(proc_majflt));
 
                     //calc the secs the process has been running
-                    int proc_startimei=0;
-                    proc_startimei = atoi(proc_startime);
+                    unsigned long proc_startimei=0;
+                    proc_startimei = atol(proc_startime);
                     int thread_etimei = (int)(SYS_UPTIME - (proc_startimei / SYS_JIFFPS));
                     //secs since last poll
                     int proc_time_diff=0;
