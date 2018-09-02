@@ -105,33 +105,52 @@ int printTop(WINDOW *topwindow, int thread_count, int STACK_WIN_MAX_COL) {
             }
 
             //SEGV
+            /*
             if (arr_jthreads[i].segv && arr_jthreads[i].segv[0] != '\0'){
                 mvwprintw(topwindow, printRow, 60, "%s", arr_jthreads[i].segv);
             }else{
                 mvwprintw(topwindow, printRow, 60, "0");
             }
+            */
+
+            //Volantary Conext Switch
+            if (arr_jthreads[i].cc_switch_v && arr_jthreads[i].cc_switch_v[0] != '\0'){
+                mvwprintw(topwindow, printRow, 60, "%s", arr_jthreads[i].cc_switch_v);
+            }else {
+                mvwprintw(topwindow, printRow, 60, "0");
+            }
+
+            //Non Volantary Conext Switch
+            if (arr_jthreads[i].cc_switch_nv && arr_jthreads[i].cc_switch_nv[0] != '\0'){
+                mvwprintw(topwindow, printRow, 65, "%s", arr_jthreads[i].cc_switch_nv);
+            }else {
+                mvwprintw(topwindow, printRow, 65, "0");
+            }
 
             //Blocking Count
             if (arr_jthreads[i].blocking){
-                mvwprintw(topwindow, printRow, 65, "%d", arr_jthreads[i].blocking);
+                mvwprintw(topwindow, printRow, 70, "%d", arr_jthreads[i].blocking);
             }else{
-                mvwprintw(topwindow, printRow, 65, "0");
+                mvwprintw(topwindow, printRow, 70, "0");
             }
 
             //Name
             if (arr_jthreads[i].name && arr_jthreads[i].name[0] != '\0'){
-                mvwprintw(topwindow, printRow, 70, "%s", arr_jthreads[i].name);
+                mvwprintw(topwindow, printRow, 75, "%s", arr_jthreads[i].name);
+                if(strlen(arr_jthreads[i].name)>26){
+                    mvwprintw(topwindow, printRow, 98, "... ");
+                }
             }else{
-                mvwprintw(topwindow, printRow, 70, "?");
+                mvwprintw(topwindow, printRow, 75, "?");
             }
 
             //Command
             if(filterMode && arr_jthreads[i].altcommand && arr_jthreads[i].altcommand[0] != '\0'){
-                mvwprintw(topwindow, printRow, 97, "%s", arr_jthreads[i].altcommand);
+                mvwprintw(topwindow, printRow, 102, "%s", arr_jthreads[i].altcommand);
             }else if (arr_jthreads[i].command && arr_jthreads[i].command[0] != '\0'){
-                mvwprintw(topwindow, printRow, 97, "%s", arr_jthreads[i].command);
+                mvwprintw(topwindow, printRow, 102, "%s", arr_jthreads[i].command);
             }else{
-                mvwprintw(topwindow, printRow, 97, "n/a");
+                mvwprintw(topwindow, printRow, 102, "n/a");
             }
 
             //raw cpu

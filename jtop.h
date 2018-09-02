@@ -60,22 +60,28 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+
+
 struct jthread{
-    char pid[10];
-    char name[256];
-    char state[10];
-    char pcpu[6];
-    char ccpu[6];
-    char minfault[100];
-    char majfault[100];
-    char secs[10];
-    char segv[2];
-    char command[400];
-    char altcommand[400];
-    int rawcpu;
+    char pid[10]; // Thread ID
+    char name[256]; // Name of Thread
+    char state[10]; // Running / Sleeping / Zombie...
+    char pcpu[6]; // CPU Usage...
+    char ccpu[6]; // Sampled CPU Usage...
+    char minfault[100]; // Minor page fault counter
+    char majfault[100]; // Major page fault counter
+    char secs[10]; // Seconds running
+    char segv[2]; // not used
+    char command[400]; // Current Java Call
+    char altcommand[400]; // Filtered Java Call for project relevant code
+    int rawcpu; // CPU counter, internal
     char cpu_total[50];
-    int blocking;
+    int blocking; // Count of threads blocked by this thread
     char wlock[20];
+    long c_switch_nv; // Non Volantary Context Switch Count
+    long c_switch_v; // Volantary Context Switch Count
+    char cc_switch_nv[10]; // Sampled NVCS
+    char cc_switch_v[10]; // Sampled VCS
 };
 
 struct ignore_thread {

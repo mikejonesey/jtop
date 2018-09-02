@@ -358,7 +358,62 @@ void getStatus(char *javapid){
                         }else{
                             strcpy(arr_jthreads[i].segv,"N");
                         }
-                        break;
+                        //break;
+                    }
+                    if(strstr(tstatus_txt,"nonvoluntary_ctxt_switches:")){
+                        // save the non vol counter, and calculate a pct
+                        int istrpos = 0;
+                        int istrsav = 0;
+                        char tmpnvcs[1000];
+                        while(tstatus_txt[istrpos]!='\0'&&istrpos<1000){
+                            if(tstatus_txt[istrpos]<'0'||tstatus_txt[istrpos]>'9'){
+                                istrpos++;
+                                continue;
+                            }
+                            tmpnvcs[istrsav]=tstatus_txt[istrpos];
+                            istrpos++;
+                            istrsav++;
+                        }
+                        tmpnvcs[istrsav]='\0';
+                        long tmplnvcs=atol(tmpnvcs);
+                        int calcdiff=0;
+                        if (arr_jthreads[i].c_switch_nv){
+                            calcdiff = (tmplnvcs-arr_jthreads[i].c_switch_nv)/5;
+                        }
+                        arr_jthreads[i].c_switch_nv = tmplnvcs;
+                        char cc_switch_nv[100];
+                        sprintf(cc_switch_nv, "%d", calcdiff);
+                        //sprintf(cc_switch_nv, "%d-%d=%d", tmplnvcs, arr_jthreads[i].c_switch_nv, calcdiff);
+                        strcpy(arr_jthreads[i].cc_switch_nv, cc_switch_nv);
+                        memset(cc_switch_nv, 0, sizeof(cc_switch_nv));
+                        //printf("[DEBUG1011: %s]\n",tstatus_txt);
+                    }else if(strstr(tstatus_txt,"voluntary_ctxt_switches:")){
+                        // save the vol count, and calc a pct
+                        int istrpos = 0;
+                        int istrsav = 0;
+                        char tmpvcs[1000];
+                        while(tstatus_txt[istrpos]!='\0'&&istrpos<1000){
+                            if(tstatus_txt[istrpos]<'0'||tstatus_txt[istrpos]>'9'){
+                                istrpos++;
+                                continue;
+                            }
+                            tmpvcs[istrsav]=tstatus_txt[istrpos];
+                            istrpos++;
+                            istrsav++;
+                        }
+                        tmpvcs[istrsav]='\0';
+                        long tmplvcs=atol(tmpvcs);
+                        int calcdiff=0;
+                        if (arr_jthreads[i].c_switch_v){
+                            calcdiff = (tmplvcs - arr_jthreads[i].c_switch_v)/5;
+                        }
+                        arr_jthreads[i].c_switch_v = tmplvcs;
+                        char cc_switch_v[100];
+                        sprintf(cc_switch_v, "%d", calcdiff);
+                        //sprintf(cc_switch_v, "%d-%d=%d", tmplvcs, arr_jthreads[i].c_switch_v, calcdiff);
+                        strcpy(arr_jthreads[i].cc_switch_v, cc_switch_v);
+                        memset(cc_switch_v, 0, sizeof(cc_switch_v));
+                        //printf("[DEBUG1010: %s]\n",tmpvcs);
                     }
                 }
                 fclose(f_tstatus);
