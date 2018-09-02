@@ -71,4 +71,7 @@ Blocked Threads Inspection (p1):
 ![Blocked Threads p1](https://raw.githubusercontent.com/mikejonesey/jtop/master/jtop-demo-02.png)
 Blocked Threads Inspection (p2):
 ![Blocked Threads p1](https://raw.githubusercontent.com/mikejonesey/jtop/master/jtop-demo-03.png)
+Issues with Code Cache
+![Blocked Threads p1](https://raw.githubusercontent.com/mikejonesey/jtop/master/jtop-demo-04.png)
+
 
