@@ -238,7 +238,7 @@ int getJavaStack(char *javaPID, int *cnt_win_stack_rows_p, char *stacklines[], i
                         }
                         nidStr[ii] = '\0';
                         int tpidi=hex2int(nidStr);
-                        char tpid[6];
+                        char tpid[10];
                         sprintf(tpid, "%li", tpidi);
                         cur_jthread = getThread(tpid,cnt_threads);
                         if((*cur_jthread).pid[0]=='\0'){
@@ -247,10 +247,10 @@ int getJavaStack(char *javaPID, int *cnt_win_stack_rows_p, char *stacklines[], i
                         }
                     }//end nid
                     // update thread name
-                    char threadName[25];
+                    char threadName[256];
                     memset(threadName, 0, sizeof(threadName));
                     int i = 0;
-                    while (res2buf[i + 1] != '"' && i < 21) {
+                    while (res2buf[i + 1] != '"' && i < 255) {
                         threadName[i] = res2buf[i + 1];
                         i++;
                     }

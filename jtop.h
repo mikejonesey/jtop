@@ -61,8 +61,8 @@
 #include <unistd.h>
 
 struct jthread{
-    char pid[6];
-    char name[22];
+    char pid[10];
+    char name[256];
     char state[10];
     char pcpu[6];
     char ccpu[6];
@@ -79,7 +79,7 @@ struct jthread{
 };
 
 struct ignore_thread {
-    char pid[6];
+    char pid[10];
 };
 
 struct objectsync{
