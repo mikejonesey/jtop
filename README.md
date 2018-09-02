@@ -29,7 +29,9 @@ CCPU | This is the (calculated / sampled)CPU usage of the thread as you would se
 MinFault | A minor page fault count for the thread.
 MajFault | A major page fault count for the thread.
 SECS | Number of seconds the thread has been running.
-SEGV | Unused - more info below...
+SEGV | Unused - more info below... -- REMOVED
+cVS | Calculated / Sampled rate of Volantary Context Switches
+cNVS | Calculated / Sampled rate of NON-Volantary Context Switches
 BLK | A count of how many threads are blocked by the current thread.
 Name | The thread name, for example "main" or "VM Thread".
 Command | The current java command the thread is working on.
