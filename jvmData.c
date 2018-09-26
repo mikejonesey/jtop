@@ -376,6 +376,7 @@ int getJavaStack(char *javaPID, int *cnt_win_stack_rows_p, char *stacklines[], i
                         respos++;
                         i++;
                     }
+                    cur_jthread->wlock[i]='\0';
                     // add to stacklines
                     stacklines[cnt_win_stack_rows] = malloc(strlen(res2buf) + 1);
                     strcpy(stacklines[cnt_win_stack_rows], res2buf);

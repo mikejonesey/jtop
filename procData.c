@@ -27,6 +27,20 @@ void getStat(char *javapid){
     memset(tstat_path, 0, sizeof(tstat_path));
     FILE *f_tstat;
 
+    int cnt_proc_state=0;
+    int cnt_proc_minflt=0;
+    int cnt_proc_majflt=0;
+    int cnt_proc_utime=0;
+    int cnt_proc_stime=0;
+    int cnt_proc_startime=0;
+
+    char proc_state[100];
+    char proc_minflt[100];
+    char proc_majflt[100];
+    char proc_utime[100];
+    char proc_stime[100];
+    char proc_startime[1000];
+
     struct sysinfo info;
     sysinfo(&info);
     const long int SYS_UPTIME = info.uptime;
@@ -51,23 +65,13 @@ void getStat(char *javapid){
                 fclose(f_tstat);
                 int space_count = 0;
 
-                int cnt_proc_state=0;
-                char proc_state[100];
+                cnt_proc_state=0;
+                cnt_proc_minflt=0;
+                cnt_proc_majflt=0;
+                cnt_proc_utime=0;
+                cnt_proc_stime=0;
+                cnt_proc_startime=0;
 
-                int cnt_proc_minflt=0;
-                char proc_minflt[100];
-
-                int cnt_proc_majflt=0;
-                char proc_majflt[100];
-
-                int cnt_proc_utime=0;
-                char proc_utime[100];
-
-                int cnt_proc_stime=0;
-                char proc_stime[100];
-
-                int cnt_proc_startime=0;
-                char proc_startime[1000];
                 memset(proc_startime, 0, sizeof(proc_startime));
                 if(tstat_txt&&strstr(tstat_txt," ")){
                     for(int filei=0; filei<512; filei++){
@@ -124,6 +128,9 @@ void getStat(char *javapid){
                             proc_startime[cnt_proc_startime] = tstat_txt[filei];
                             cnt_proc_startime++;
                         }
+                        if(space_count>21){
+                            break;
+                        }
                         //space_count==22 //vsize
                         //space_count==23 //rss
                         //space_count==24 //rsslim
@@ -163,6 +170,7 @@ void getStat(char *javapid){
                     proc_stime[cnt_proc_stime]='\0';
                     proc_startime[cnt_proc_startime]='\0';
 
+                    //state (R|S|D|Z|T|t|W|X|x|K|W|P)
                     if(arr_jthreads[i].state==NULL||strlen(arr_jthreads[i].state)<2){
                         if(proc_state[0]=='R'){
                             strcpy(arr_jthreads[i].state, "RUNNING\0");
@@ -173,19 +181,27 @@ void getStat(char *javapid){
                         }else if(proc_state[0]=='B'){
                             strcpy(arr_jthreads[i].state, "BLOCKED\0");
                             cntThreadBlocked++;
-                        }else if(proc_state[0]=='S'){
+                        }else if(proc_state[0]=='S'||proc_state[0]=='D') {
                             strcpy(arr_jthreads[i].state, "SLEEP\0");
                             cntThreadWaiting++;
+                        }else if(proc_state[0]=='T'){
+                            strcpy(arr_jthreads[i].state, "Trace\0");
+                            cntThreadWaiting++;
+                        }else if(proc_state[0]=='Z'){
+                            strcpy(arr_jthreads[i].state, "Zombie\0");
+                            cntThreadBlocked++;
                         }
                     }
                     memset(proc_state, 0, sizeof(proc_state));
 
                     //store the minor page faults
-                    strcpy(arr_jthreads[i].minfault, proc_minflt);
+                    long proc_minflt_l = atol(proc_minflt);
+                    arr_jthreads[i].minfault = proc_minflt_l;
                     memset(proc_minflt, 0, sizeof(proc_minflt));
 
                     //store the major page faults
-                    strcpy(arr_jthreads[i].majfault, proc_majflt);
+                    long proc_majflt_l = atol(proc_majflt);
+                    arr_jthreads[i].majfault = proc_majflt_l;
                     memset(proc_majflt, 0, sizeof(proc_majflt));
 
                     //calc the secs the process has been running
@@ -194,54 +210,37 @@ void getStat(char *javapid){
                     int thread_etimei = (int)(SYS_UPTIME - (proc_startimei / SYS_JIFFPS));
                     //secs since last poll
                     int proc_time_diff=0;
-                    int last_secs=0;
-                    if(arr_jthreads[i].secs){
-                        last_secs = atoi(arr_jthreads[i].secs);
-                    }else{
+                    int last_secs=arr_jthreads[i].secs;
+                    if(arr_jthreads[i].secs==0){
                         last_secs = thread_etimei-6;
                     }
                     proc_time_diff=thread_etimei-last_secs;
                     //store secs running
-                    char thread_secs[100];
-                    sprintf(thread_secs, "%d", thread_etimei);
-                    strcpy(arr_jthreads[i].secs, thread_secs);
+                    arr_jthreads[i].secs=thread_etimei;
                     memset(proc_startime, 0, sizeof(proc_startime));
-                    memset(thread_secs, 0, sizeof(thread_secs));
 
                     //calc CPU
                     if(proc_stime&&proc_utime){
-                        char cpu_time_str[100];
-                        char cpu_time_cur_str[100];
+//                        char cpu_time_str[100];
                         cnt_proc_stime=atoi(proc_stime);
                         cnt_proc_utime=atoi(proc_utime);
 
                         //get last cpu total
-                        int cputtime_last=0;
-                        if(arr_jthreads[i].cpu_total!=NULL){
-                            cputtime_last=atoi(arr_jthreads[i].cpu_total);
-                        }else{
-                            cputtime_last=0;
-                        }
+                        int cputtime_last=arr_jthreads[i].rawcpu;
                         //update cpu total
                         int cputime_useker=cnt_proc_stime+cnt_proc_utime;
-                        sprintf(cpu_time_str, "%d", cputime_useker);
                         arr_jthreads[i].rawcpu = cputime_useker;
-                        strcpy(arr_jthreads[i].cpu_total, cpu_time_str);
-                        memset(cpu_time_str, 0, sizeof(cpu_time_str));
 
                         // calc PCPU (CPCPU)
-                        //double cputime=(((cputime_useker)/SYS_JIFFPS)/proc_startimei);
-                        //double cputime=((cputime_useker)/SYS_JIFFPS);
                         double cputime=(double)cputime_useker/thread_etimei;
-                        sprintf(cpu_time_str, "%0.2f", cputime);
-                        strcpy(arr_jthreads[i].pcpu, cpu_time_str);
+
+                        arr_jthreads[i].pcpu = cputime;
+
                         memset(proc_stime, 0, sizeof(proc_stime));
                         memset(proc_utime, 0, sizeof(proc_utime));
-                        memset(cpu_time_str, 0, sizeof(cpu_time_str));
 
                         // calc PCPU from last for a current cpu
                         int cputime_cur_tot = cputime_useker-cputtime_last;
-                        //double cputimecur=(double)(cputime_cur_tot/proc_time_diff)*SYS_JIFFPS;
                         float proc_time_diff_secs = proc_time_diff/1000;
                         if(proc_time_diff_secs<1){
                             proc_time_diff_secs=1;
@@ -250,15 +249,7 @@ void getStat(char *javapid){
                         if(cputimecur>100){
                             cputimecur=100;
                         }
-                        sprintf(cpu_time_cur_str, "%0.2f", cputimecur);
-                        while(cpu_time_cur_str[strlen(cpu_time_cur_str)-1]=='0'){
-                            cpu_time_cur_str[strlen(cpu_time_cur_str)-1]='\0';
-                        }
-                        if(cpu_time_cur_str[strlen(cpu_time_cur_str)-1]=='.'){
-                            cpu_time_cur_str[strlen(cpu_time_cur_str)-1]='\0';
-                        }
-                        strcpy(arr_jthreads[i].ccpu, cpu_time_cur_str);
-                        memset(cpu_time_cur_str, 0, sizeof(cpu_time_cur_str));
+                        arr_jthreads[i].ccpu=cputimecur;
 
                         if(cputimecur>10){
                             updateClassInfo(cputimecur,arr_jthreads[i].altcommand);
@@ -280,22 +271,22 @@ void getStat(char *javapid){
                 strcpy(arr_jthreads[i].state, "CLOSED");
 
                 //minor page faults
-                strcpy(arr_jthreads[i].minfault, "0\0");
+                arr_jthreads[i].minfault=0;
 
                 //major page faults
-                strcpy(arr_jthreads[i].majfault, "0");
+                arr_jthreads[i].majfault=0;
 
                 //secs
-                strcpy(arr_jthreads[i].secs, "0\0");
+                arr_jthreads[i].secs=0;
 
                 //cpu
-                strcpy(arr_jthreads[i].pcpu, "0.00");
+                arr_jthreads[i].pcpu=0;
 
                 //cpuraw
-                strcpy(arr_jthreads[i].cpu_total, "0\0");
+                arr_jthreads[i].rawcpu=0;
 
                 //ccpu
-                strcpy(arr_jthreads[i].ccpu, "0\0");
+                arr_jthreads[i].ccpu=0;
             }
             // Clean up between each thread being processed
         }
@@ -381,12 +372,7 @@ void getStatus(char *javapid){
                             calcdiff = (tmplnvcs-arr_jthreads[i].c_switch_nv)/5;
                         }
                         arr_jthreads[i].c_switch_nv = tmplnvcs;
-                        char cc_switch_nv[100];
-                        sprintf(cc_switch_nv, "%d", calcdiff);
-                        //sprintf(cc_switch_nv, "%d-%d=%d", tmplnvcs, arr_jthreads[i].c_switch_nv, calcdiff);
-                        strcpy(arr_jthreads[i].cc_switch_nv, cc_switch_nv);
-                        memset(cc_switch_nv, 0, sizeof(cc_switch_nv));
-                        //printf("[DEBUG1011: %s]\n",tstatus_txt);
+                        arr_jthreads[i].cc_switch_nv = calcdiff;
                     }else if(strstr(tstatus_txt,"voluntary_ctxt_switches:")){
                         // save the vol count, and calc a pct
                         int istrpos = 0;
@@ -408,12 +394,7 @@ void getStatus(char *javapid){
                             calcdiff = (tmplvcs - arr_jthreads[i].c_switch_v)/5;
                         }
                         arr_jthreads[i].c_switch_v = tmplvcs;
-                        char cc_switch_v[100];
-                        sprintf(cc_switch_v, "%d", calcdiff);
-                        //sprintf(cc_switch_v, "%d-%d=%d", tmplvcs, arr_jthreads[i].c_switch_v, calcdiff);
-                        strcpy(arr_jthreads[i].cc_switch_v, cc_switch_v);
-                        memset(cc_switch_v, 0, sizeof(cc_switch_v));
-                        //printf("[DEBUG1010: %s]\n",tmpvcs);
+                        arr_jthreads[i].cc_switch_v = calcdiff;
                     }
                 }
                 fclose(f_tstatus);
@@ -475,14 +456,13 @@ void getNewThreads(char *javapid){
                                 strcpy(arr_jthreads[cnt_threads].name, "New-thread");
                             }
                             strcpy(arr_jthreads[cnt_threads].state, "U");
-                            strcpy(arr_jthreads[cnt_threads].pcpu, "0");
-                            strcpy(arr_jthreads[cnt_threads].ccpu, "0");
-                            strcpy(arr_jthreads[cnt_threads].minfault, "0");
-                            strcpy(arr_jthreads[cnt_threads].majfault, "0");
-                            strcpy(arr_jthreads[cnt_threads].secs, "0");
+                            arr_jthreads[cnt_threads].pcpu=0.00;
+                            arr_jthreads[cnt_threads].ccpu=0;
+                            arr_jthreads[cnt_threads].minfault=0;
+                            arr_jthreads[cnt_threads].majfault=0;
+                            arr_jthreads[cnt_threads].secs=0;
                             strcpy(arr_jthreads[cnt_threads].segv, "N");
                             arr_jthreads[cnt_threads].rawcpu=0;
-                            strcpy(arr_jthreads[cnt_threads].cpu_total, "0");
                             cnt_threads++;
                         }else{
                             // exclude the thread...

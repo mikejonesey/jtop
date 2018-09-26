@@ -65,43 +65,22 @@ int printTop(WINDOW *topwindow, int thread_count, int STACK_WIN_MAX_COL) {
             }
 
             //PCPU
-            if (arr_jthreads[i].pcpu){
-                mvwprintw(topwindow, printRow, 16, "%s", arr_jthreads[i].pcpu);
-            }else{
-                mvwprintw(topwindow, printRow, 16, "?");
-            }
+            mvwprintw(topwindow, printRow, 16, "%0.2f", arr_jthreads[i].pcpu);
 
             //CCPU
-            if (arr_jthreads[i].ccpu){
-                mvwprintw(topwindow, printRow, 23, "%s", arr_jthreads[i].ccpu);
-            }else{
-                mvwprintw(topwindow, printRow, 23, "?");
-            }
+            mvwprintw(topwindow, printRow, 23, "%0.2f", arr_jthreads[i].ccpu);
 
             //MinFault
-            if (arr_jthreads[i].minfault && arr_jthreads[i].minfault[0] != '\0'){
-                mvwprintw(topwindow, printRow, 30, "%s", arr_jthreads[i].minfault);
-
-            } else {
-                mvwprintw(topwindow, printRow, 30, "?");
-            }
+            mvwprintw(topwindow, printRow, 30, "%o", arr_jthreads[i].minfault);
 
             //MajFault
-            if (arr_jthreads[i].majfault && arr_jthreads[i].majfault[0] != '\0'){
-                mvwprintw(topwindow, printRow, 41, "%s", arr_jthreads[i].majfault);
-            }else{
-                mvwprintw(topwindow, printRow, 41, "?");
-            }
+            mvwprintw(topwindow, printRow, 41, "%o", arr_jthreads[i].majfault);
 
             //SECS
-            if (arr_jthreads[i].secs){
-                if(strlen(arr_jthreads[i].secs)>7){
-                    mvwprintw(topwindow, printRow, 52, "E");
-                }else{
-                    mvwprintw(topwindow, printRow, 52, "%s", arr_jthreads[i].secs);
-                }
+            if(arr_jthreads[i].secs>9999999){
+                mvwprintw(topwindow, printRow, 52, "E");
             }else{
-                mvwprintw(topwindow, printRow, 52, "?");
+                mvwprintw(topwindow, printRow, 52, "%d", arr_jthreads[i].secs);
             }
 
             //SEGV
@@ -114,15 +93,17 @@ int printTop(WINDOW *topwindow, int thread_count, int STACK_WIN_MAX_COL) {
             */
 
             //Volantary Conext Switch
-            if (arr_jthreads[i].cc_switch_v && arr_jthreads[i].cc_switch_v[0] != '\0'){
-                mvwprintw(topwindow, printRow, 60, "%s", arr_jthreads[i].cc_switch_v);
+            //if (arr_jthreads[i].cc_switch_v && arr_jthreads[i].cc_switch_v[0] != '\0'){
+            if (arr_jthreads[i].cc_switch_v){
+                mvwprintw(topwindow, printRow, 60, "%d", arr_jthreads[i].cc_switch_v);
             }else {
                 mvwprintw(topwindow, printRow, 60, "0");
             }
 
             //Non Volantary Conext Switch
-            if (arr_jthreads[i].cc_switch_nv && arr_jthreads[i].cc_switch_nv[0] != '\0'){
-                mvwprintw(topwindow, printRow, 65, "%s", arr_jthreads[i].cc_switch_nv);
+            //if (arr_jthreads[i].cc_switch_nv && arr_jthreads[i].cc_switch_nv[0] != '\0'){
+            if (arr_jthreads[i].cc_switch_nv){
+                mvwprintw(topwindow, printRow, 65, "%d", arr_jthreads[i].cc_switch_nv);
             }else {
                 mvwprintw(topwindow, printRow, 65, "0");
             }
@@ -193,47 +174,32 @@ int printTop(WINDOW *topwindow, int thread_count, int STACK_WIN_MAX_COL) {
 void orderByCPU(){
     int thread_count = cnt_threads;
     struct jthread tmp_jthread;
-    int blockedi,blockedii,cpufulli,cpufullii;
-    double cpunowi, cpunowii;
+    int cpufulli,cpufullii;
     for(int i=0; i<thread_count; i++){
         // set variables from Set A
-        blockedi=arr_jthreads[i].blocking;
         if(arr_jthreads[i].rawcpu){
             cpufulli=arr_jthreads[i].rawcpu;
         }else{
             cpufulli=0;
         }
-        if(arr_jthreads[i].ccpu){
-            cpunowi=strtod(arr_jthreads[i].ccpu,NULL);
-        }else{
-            cpunowi=0;
-        }
         for(int ii=i+1; ii<thread_count; ii++){
             // set variables from Set B
-            blockedii=arr_jthreads[ii].blocking;
             if(arr_jthreads[ii].rawcpu){
                 cpufullii=arr_jthreads[ii].rawcpu;
             }else{
                 cpufullii=0;
             }
-            if(arr_jthreads[ii].ccpu){
-                cpunowii=strtod(arr_jthreads[ii].ccpu,NULL);
-            }else{
-                cpunowii=0;
-            }
             // compare vars...
-            if((blockedi<blockedii)||
-               (cpunowi<cpunowii && blockedi<=blockedii)||
-               (cpufulli<cpufullii && cpunowi<=cpunowii && blockedi<=blockedii)){
+            if((arr_jthreads[i].blocking<arr_jthreads[ii].blocking)||
+               (arr_jthreads[i].ccpu<arr_jthreads[ii].ccpu && arr_jthreads[i].blocking<=arr_jthreads[ii].blocking)||
+               (cpufulli<cpufullii && arr_jthreads[i].ccpu<=arr_jthreads[ii].ccpu && arr_jthreads[i].blocking<=arr_jthreads[ii].blocking)){
                 // off to temp
                 tmp_jthread = arr_jthreads[i];
                 // shift
                 arr_jthreads[i] = arr_jthreads[ii];
                 // back from temp
                 arr_jthreads[ii] = tmp_jthread;
-                cpunowi=cpunowii;
                 cpufulli=cpufullii;
-                blockedi=blockedii;
             }
         }
 

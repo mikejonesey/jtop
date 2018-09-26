@@ -60,28 +60,25 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-
-
 struct jthread{
     char pid[10]; // Thread ID
-    char name[256]; // Name of Thread
+    char name[256]; // Name of Thread / "C2 CompilerThread1"
     char state[10]; // Running / Sleeping / Zombie...
-    char pcpu[6]; // CPU Usage...
-    char ccpu[6]; // Sampled CPU Usage...
-    char minfault[100]; // Minor page fault counter
-    char majfault[100]; // Major page fault counter
-    char secs[10]; // Seconds running
+    double pcpu; // CPU Usage... 0.0
+    double ccpu; // Sampled CPU Usage... 0.0
+    long minfault; // Minor page fault counter
+    long majfault; // Major page fault counter
+    long secs; // Seconds running / 123
     char segv[2]; // not used
-    char command[400]; // Current Java Call
-    char altcommand[400]; // Filtered Java Call for project relevant code
-    int rawcpu; // CPU counter, internal
-    char cpu_total[50];
-    int blocking; // Count of threads blocked by this thread
+    char command[400]; // Current Java Call / "org.eclipse.swt.internal.gtk.OS.Call(Native Method)"
+    char altcommand[400]; // Filtered Java Call for project relevant code / "org.eclipse.swt.internal.gtk.OS.Call(Native Method)"
+    int rawcpu; // CPU counter, internal / 123
+    int blocking; // Count of threads blocked by this thread / 0
     char wlock[20];
-    long c_switch_nv; // Non Volantary Context Switch Count
-    long c_switch_v; // Volantary Context Switch Count
-    char cc_switch_nv[10]; // Sampled NVCS
-    char cc_switch_v[10]; // Sampled VCS
+    long c_switch_nv; // Non Volantary Context Switch Count / 123456
+    long c_switch_v; // Volantary Context Switch Count / 123456
+    double cc_switch_nv; // Sampled NVCS / 0.0
+    double cc_switch_v; // Sampled VCS / 0.0
 };
 
 struct ignore_thread {
