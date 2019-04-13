@@ -220,13 +220,17 @@ void getStat(char *javapid){
                     memset(proc_startime, 0, sizeof(proc_startime));
 
                     //calc CPU
+                    int cputtime_last;
                     if(proc_stime&&proc_utime){
-//                        char cpu_time_str[100];
                         cnt_proc_stime=atoi(proc_stime);
                         cnt_proc_utime=atoi(proc_utime);
 
                         //get last cpu total
-                        int cputtime_last=arr_jthreads[i].rawcpu;
+                        if(arr_jthreads[i].rawcpu==0){
+                            cputtime_last=cnt_proc_stime+cnt_proc_utime;
+                        }else{
+                            cputtime_last=arr_jthreads[i].rawcpu;
+                        }
                         //update cpu total
                         int cputime_useker=cnt_proc_stime+cnt_proc_utime;
                         arr_jthreads[i].rawcpu = cputime_useker;
