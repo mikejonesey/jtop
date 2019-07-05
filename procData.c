@@ -78,6 +78,11 @@ void getStat(char *javapid){
                         if (space_count > 22||tstat_txt[filei]=='\0') {
                             break;
                         }
+			if (tstat_txt[filei] == ')') {
+                            // reset space_count
+                            space_count=1;
+                            continue;
+			}
                         if (tstat_txt[filei] == ' ') {
                             space_count++;
                             continue;
@@ -190,6 +195,8 @@ void getStat(char *javapid){
                         }else if(proc_state[0]=='Z'){
                             strcpy(arr_jthreads[i].state, "Zombie\0");
                             cntThreadBlocked++;
+                        }else if(proc_state[0]=='D'){
+                            strcpy(arr_jthreads[i].state, "Disk\0");
                         }
                     }
                     memset(proc_state, 0, sizeof(proc_state));
