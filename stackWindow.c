@@ -93,3 +93,17 @@ void printJavaThreadStack(WINDOW *win_stack, char *threadName, int cnt_rows, cha
     }
     wrefresh(win_stack);
 }
+
+int getLineJavaStack(int cnt_rows, char * srchString, char *stacklines[]){
+    int printline=0;
+    for(int i=0; i<cnt_rows; i++){
+        if(strstr(stacklines[i],srchString)){
+            break;
+        }
+        printline++;
+    }
+    printline--;
+    printline--;
+    printline--;
+    return printline;
+}

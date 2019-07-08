@@ -839,14 +839,30 @@ int main(int argc, char **argv) {
             // Toggle controls
             ////////////////////
             if(focusOn==0){
+                cnt_scroll=0;
                 focusOn=1;
                 printJavaThreadStack(win_stack, arr_jthreads[topActiveRow].name, cnt_win_stack_rows, arr_stacklines, STACK_WIN_MAX_LINE);
             }else{
                 focusOn=0;
                 if(filterMode){
+                    // Get the active line number...
+                    int curlinenum = getLineJavaStack(cnt_win_stack_rows_filt, arr_jthreads[topActiveRow].name, arr_stacklines_filt);
+                    // Set the current line number to use...
+                    cnt_scroll=curlinenum-1;
+                    // Print the trace...
                     printJavaStack(win_stack, cnt_win_stack_rows_filt, arr_stacklines_filt, STACK_WIN_MAX_LINE);
                 }else{
+                    // Get the active line number...
+                    int curlinenum = getLineJavaStack(cnt_win_stack_rows, arr_jthreads[topActiveRow].name, arr_stacklines);
+                    // Set the current line number to use...
+                    //cnt_scroll=curlinenum-1;
+                    // Print the trace...
                     printJavaStack(win_stack, cnt_win_stack_rows, arr_stacklines, STACK_WIN_MAX_LINE);
+                    int limitloop=0;
+                    while (cnt_scroll <= (curlinenum-5) && limitloop<100){
+                        scrollDown(win_stack, win_jtop, &cnt_scroll, arr_stacklines, arr_stacklines_filt, &cnt_win_stack_rows, &STACK_WIN_MAX_LINE, &JTOP_WIN_MAX_LINE, &STACK_WIN_MAX_COL);
+                        limitloop++;
+                    }
                 }
             }
         } else if (key_in == 103) {

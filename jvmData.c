@@ -192,9 +192,9 @@ int getJavaStack(char *javaPID, int *cnt_win_stack_rows_p, char *stacklines[], i
             if(outputbuf[nbytes-1]!='\n'){
                 while(nbytes>0 && outputbufpad[0] != '\n' && strlen(outputbuf)<sizeof(outputbuf)-4){
                     nbytes = read(link[0], outputbufpad, 1);
-                    strncat(outputbuf,outputbufpad,2);
+                    strncat(outputbuf,outputbufpad,1);
                 }
-                strncat(outputbuf,outputbufpad,2);
+                strncat(outputbuf,outputbufpad,1);
             }
             res2bufraw = strtok(outputbuf, "\n");
             //////////////////////////////////////////////////
