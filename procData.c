@@ -27,6 +27,7 @@ void getStat(char *javapid){
     memset(tstat_path, 0, sizeof(tstat_path));
     FILE *f_tstat;
 
+    int cnt_proc_comm=0;
     int cnt_proc_state=0;
     int cnt_proc_minflt=0;
     int cnt_proc_majflt=0;
@@ -34,6 +35,7 @@ void getStat(char *javapid){
     int cnt_proc_stime=0;
     int cnt_proc_startime=0;
 
+    char proc_comm[100];
     char proc_state[100];
     char proc_minflt[100];
     char proc_majflt[100];
@@ -65,6 +67,7 @@ void getStat(char *javapid){
                 fclose(f_tstat);
                 int space_count = 0;
 
+                cnt_proc_comm=0;
                 cnt_proc_state=0;
                 cnt_proc_minflt=0;
                 cnt_proc_majflt=0;
@@ -78,17 +81,23 @@ void getStat(char *javapid){
                         if (space_count > 22||tstat_txt[filei]=='\0') {
                             break;
                         }
-			if (tstat_txt[filei] == ')') {
+                        if (tstat_txt[filei] == ')') {
                             // reset space_count
                             space_count=1;
                             continue;
-			}
+                        }
                         if (tstat_txt[filei] == ' ') {
                             space_count++;
                             continue;
                         }
                         //space_count==0 //pid
-                        //space_count==1 //comm
+                        if (space_count == 1) {
+                            //space_count==1 //comm
+                            if(tstat_txt[filei]!='('){
+                                proc_comm[cnt_proc_comm] = tstat_txt[filei];
+                                cnt_proc_comm++;
+                            }
+                        }
                         if (space_count == 2) {
                             //state (R|S|D|Z|T|t|W|X|x|K|W|P)
                             proc_state[cnt_proc_state] = tstat_txt[filei];
@@ -168,12 +177,17 @@ void getStat(char *javapid){
                         //space_count==51 //exit_code - The thread's exit status in the form reported by waitpid
                     }
 
+                    proc_comm[cnt_proc_comm]='\0';
                     proc_state[cnt_proc_state]='\0';
                     proc_minflt[cnt_proc_minflt]='\0';
                     proc_majflt[cnt_proc_majflt]='\0';
                     proc_utime[cnt_proc_utime]='\0';
                     proc_stime[cnt_proc_stime]='\0';
                     proc_startime[cnt_proc_startime]='\0';
+
+                    if(strcmp(arr_jthreads[i].name, "New-thread")==0 && strcmp(proc_comm, "java")!= 0){
+                        strcpy(arr_jthreads[i].name, proc_comm);
+                    }
 
                     //state (R|S|D|Z|T|t|W|X|x|K|W|P)
                     if(arr_jthreads[i].state==NULL||strlen(arr_jthreads[i].state)<2){
