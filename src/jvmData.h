@@ -22,14 +22,14 @@
 #ifndef JTOP_JVMDATA_H
 #define JTOP_JVMDATA_H
 
+//var
 struct jthread *vmthread;
 
+// func
 int hex2int(const char *hexin);
-
-struct jthread* getThread(char* tpid, int cnt_threads);
-
+struct jthread* getThread(const char* tpid);
 void getExcludes(int *cnt_exclude, char *arr_exclude[]);
-int getJavaStack(char *javaPID, int *cnt_win_stack_rows_p, char *stacklines[], int STACK_WIN_MAX_COL, int *cntThreadRunning_p, int *cntThreadWaiting_p, int *cntThreadBlocked_p, int cnt_excludes, char *arr_excludes[]);
-void getJavaStackFiltered(int cnt_win_stack_rows, int *cnt_win_stack_rows_filtp, int cnt_excludes, char* arr_excludes[], char *stacklines[], char *stacklines_filt[]);
+int getJavaStack(char *javaPID, int *cntThreadRunning_p, int *cntThreadWaiting_p, int *cntThreadBlocked_p, int cnt_excludes, char *arr_excludes[]);
+void getJavaStackFiltered(int cnt_excludes, char* arr_excludes[]);
 
 #endif //JTOP_JVMDATA_H

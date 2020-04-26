@@ -26,7 +26,7 @@
 #include "classcpuWindow.h"
 
 // argp: Arguments - getopt
-const char *argp_program_version = "jtop 1.0";
+const char *argp_program_version = "jtop 1.0.1";
 const char *argp_program_bug_address = "<michael.jones@linux.com>";
 static char doc[] = "interactive java process viewer.";
 static char args_doc[] = "...";
@@ -74,7 +74,7 @@ bool filterMode = false;
 int focusOn=0;
 int orderMode=0;
 
-bool procIsJava(char *pid){
+bool procIsJava(const char *pid){
     char buffer[100];
     char procpath[100];
     FILE *f_procfs;
@@ -82,9 +82,9 @@ bool procIsJava(char *pid){
     memset(buffer, 0, sizeof(buffer));
     memset(procpath, 0, sizeof(procpath));
 
-    strcpy(procpath, "/proc/");
-    strncat(procpath, pid, 10);
-    strcat(procpath, "/comm");
+    strncpy(procpath, "/proc/", 99);
+    strncat(procpath, pid, 99-strlen(procpath));
+    strncat(procpath, "/comm", 99-strlen(procpath));
     f_procfs = fopen(procpath, "r");
     if (f_procfs) {
         //comm file is open...
@@ -97,9 +97,9 @@ bool procIsJava(char *pid){
     return false;
 }
 
-bool procIsCurrentUser(char *pid, uid_t uid_curuser){
+bool procIsCurrentUser(const char *pid, uid_t uid_curuser){
     char buffer[1000];
-    char *buffsrch;
+    const char *buffsrch;
     char procpath[100];
     FILE *f_procfs;
     char procUid[100];
@@ -108,27 +108,28 @@ bool procIsCurrentUser(char *pid, uid_t uid_curuser){
     memset(procpath, 0, sizeof(procpath));
     memset(procUid, 0, sizeof(procUid));
 
-    strcpy(procpath, "/proc/");
-    strncat(procpath, pid, 10);
-    strcat(procpath, "/status");
+    strncpy(procpath, "/proc/", 99);
+    strncat(procpath, pid, 99-strlen(procpath));
+    strncat(procpath, "/status", 99-strlen(procpath));
     f_procfs = fopen(procpath, "r");
     if (f_procfs) {
         //comm file is open...
         while(fgets(buffer, sizeof(buffer), f_procfs)){
             buffsrch = strstr(buffer,"Uid:");
-            if(buffsrch){
-                int i=0;
-                while(buffsrch[i]-'0'<0 || buffsrch[i]-'0'>9){
-                    i++;
-                }
-                int iresult=0;
-                while(buffsrch[i]-'0'>=0 && buffsrch[i]-'0'<=9){
-                    procUid[iresult]=buffsrch[i];
-                    iresult++;
-                    i++;
-                }
-                break;
+            if(!buffsrch){
+                continue;
             }
+            int i=0;
+            while(buffsrch[i]-'0'<0 || buffsrch[i]-'0'>9){
+                i++;
+            }
+            int iresult=0;
+            while(buffsrch[i]-'0'>=0 && buffsrch[i]-'0'<=9){
+                procUid[iresult]=buffsrch[i];
+                iresult++;
+                i++;
+            }
+            break;
         }
         fclose(f_procfs);
         uid_t uid_procuid = (int)strtol(procUid, NULL, 0);
@@ -139,9 +140,9 @@ bool procIsCurrentUser(char *pid, uid_t uid_curuser){
     return false;
 }
 
-void getProcUser(char *pid, struct passwd *pw_procuser, char pw_procuser_buff[], size_t pw_procuser_buff_size){
+bool getProcUser(const char *pid, struct passwd *pw_procuser, char pw_procuser_buff[], size_t pw_procuser_buff_size){
     char buffer[1000];
-    char *buffsrch;
+    const char *buffsrch;
     char procpath[100];
     FILE *f_procfs;
     char procUid[100];
@@ -151,35 +152,39 @@ void getProcUser(char *pid, struct passwd *pw_procuser, char pw_procuser_buff[],
     memset(procpath, 0, sizeof(procpath));
     memset(procUid, 0, sizeof(procUid));
 
-    strcpy(procpath, "/proc/");
-    strncat(procpath, pid, 10);
-    strcat(procpath, "/status");
+    strncpy(procpath, "/proc/", 99);
+    strncat(procpath, pid, 99-strlen(procpath));
+    strncat(procpath, "/status", 99-strlen(procpath));
     f_procfs = fopen(procpath, "r");
     if (f_procfs) {
         //comm file is open...
         while(fgets(buffer, sizeof(buffer), f_procfs)){
             buffsrch = strstr(buffer,"Uid:");
-            if(buffsrch){
-                int i=0;
-                while(buffsrch[i]-'0'<0 || buffsrch[i]-'0'>9){
-                    i++;
-                }
-                int iresult=0;
-                while(buffsrch[i]-'0'>=0 && buffsrch[i]-'0'<=9){
-                    procUid[iresult]=buffsrch[i];
-                    iresult++;
-                    i++;
-                }
-                break;
+            if(!buffsrch){
+                continue;
             }
+            int i=0;
+            while(buffsrch[i]-'0'<0 || buffsrch[i]-'0'>9){
+                i++;
+            }
+            int iresult=0;
+            while(buffsrch[i]-'0'>=0 && buffsrch[i]-'0'<=9){
+                procUid[iresult]=buffsrch[i];
+                iresult++;
+                i++;
+            }
+            break;
         }
         fclose(f_procfs);
         uid_t uid_procUid = (uid_t)strtol(procUid, NULL, 0);
         getpwuid_r(uid_procUid,pw_procuser,pw_procuser_buff,pw_procuser_buff_size,&pw_temp);
+    } else{
+        return false;
     }
+    return true;
 }
 
-char *getProcCmdline(char *pid, char cmdline[], size_t cmdline_size){
+void getProcCmdline(const char *pid, char cmdline[], size_t cmdline_size){
     char buffer[1024];
     char procpath[100];
     FILE *f_procfs;
@@ -188,29 +193,30 @@ char *getProcCmdline(char *pid, char cmdline[], size_t cmdline_size){
     memset(procpath, 0, sizeof(procpath));
     memset(cmdline, 0, cmdline_size);
 
-    strcpy(procpath, "/proc/");
-    strncat(procpath, pid, 10);
-    strcat(procpath, "/cmdline");
+    strncpy(procpath, "/proc/", 99);
+    strncat(procpath, pid, 99-strlen(procpath));
+    strncat(procpath, "/cmdline", 99-strlen(procpath));
     f_procfs = fopen(procpath, "r");
-    if (f_procfs) {
-        while(fgets(buffer, sizeof(buffer), f_procfs)){
-            for(int i=0; i<sizeof(buffer)-2; i++){
-                if(buffer[i]=='\0' && buffer[i+1]!='\0'){
-                    buffer[i]=' ';
-                }else if(buffer[i]=='\0' && buffer[i+1]=='\0'){
-                    break;
-                }
-            }
-            buffer[1023]='\0';
-            strncat(cmdline,buffer,(cmdline_size-strlen(cmdline)));
-        }
-        fclose(f_procfs);
+    if (!f_procfs) {
+        return;
     }
-    return cmdline;
+    while(fgets(buffer, sizeof(buffer), f_procfs)){
+        for(int i=0; i<sizeof(buffer)-2; i++){
+            if(buffer[i]=='\0' && buffer[i+1]!='\0'){
+                buffer[i]=' ';
+            }else if(buffer[i]=='\0' && buffer[i+1]=='\0'){
+                break;
+            }
+        }
+        size_t max_write_size = cmdline_size-(strlen(cmdline)+1);
+        strncat(cmdline,buffer,max_write_size);
+    }
+    fclose(f_procfs);
+    return;
 }
 
 char *getJavaPid(char *javapid){
-    char arr_javas[10][20];
+    char arr_javas[20][20];
     // temp is a pointer to results that gets discarded, but could be used to validate results...
     struct passwd* pw_temp;
     // struct and storage buffer of current user
@@ -228,63 +234,69 @@ char *getJavaPid(char *javapid){
     // get current user info
     getpwuid_r(geteuid(),&pw_curuser,pw_curuser_buff,sizeof(pw_curuser_buff),&pw_temp);
 
-    if (procdir) {
-        while (printRow<10 && (proclist = readdir(procdir)) != NULL) {
-            if (strcmp(proclist->d_name, ".") != 0 && strcmp(proclist->d_name, "..") != 0 && (proclist->d_name[0]-'0'>=0 && proclist->d_name[0]-'0'<=9)) {
-                //check if process is java
-                if(procIsJava(proclist->d_name)){
-                    if(procIsCurrentUser(proclist->d_name,pw_curuser.pw_uid)){
-                        // store pid for later
-                        strncpy(arr_javas[printRow-1],proclist->d_name,10);
-                        // print commandline
-                        char cmdline[4096];
-                        getProcCmdline(proclist->d_name,cmdline,sizeof(cmdline));
-                        printf("%d. PID: %s\n   CMD: %s\n\n",printRow,proclist->d_name,cmdline);
-                        printRow++;
-                    }else{
-                        getProcUser(proclist->d_name,&pw_procuser,pw_procuser_buff,sizeof(pw_procuser_buff));
-                        if(pw_procuser.pw_name){
-                            printf("N/A Wrong User... PID: %s is run by user: %s, you are: %s\n\n", proclist->d_name,pw_procuser.pw_name,pw_curuser.pw_name);
-                        }else{
-                            printf("N/A Wrong User... PID: %s is run by an unknown user, you are: %s\n\n", proclist->d_name,pw_curuser.pw_name);
-                        }
-                    }
-                }
+    if (!procdir) {
+        printf("Error checking for java process, exiting...\n");
+        exit(1);
+    }
+
+    while (printRow<10) {
+        proclist = readdir(procdir);
+        if(proclist==NULL){
+            break;
+        }
+        // filter for process id
+        if (!(proclist->d_name[0]-'0' >0 && proclist->d_name[0]-'0'<=9)) {
+            continue;
+        }
+        //check if process is java
+        if(!procIsJava(proclist->d_name)){
+            continue;
+        }
+        if(procIsCurrentUser(proclist->d_name,pw_curuser.pw_uid)){
+            // store pid for later
+            strncpy(arr_javas[printRow-1],proclist->d_name,10);
+            // print commandline
+            char cmdline[4096];
+            getProcCmdline(proclist->d_name,cmdline,sizeof(cmdline));
+            printf("%d. PID: %s\n   CMD: %s\n\n",printRow,proclist->d_name,cmdline);
+            printRow++;
+        }else{
+            bool userRetrieved = getProcUser(proclist->d_name,&pw_procuser,pw_procuser_buff,sizeof(pw_procuser_buff));
+            if(!userRetrieved){
+                printf("N/A Wrong User... PID: %s is run by an unknown user, you are: %s\n\n", proclist->d_name,pw_curuser.pw_name);
+            }else if(pw_procuser.pw_name){
+                printf("N/A Wrong User... PID: %s is run by user: %s, you are: %s\n\n", proclist->d_name,pw_procuser.pw_name,pw_curuser.pw_name);
             }
         }
-        closedir(procdir);
     }
+    closedir(procdir);
 
     int userselection;
     if(printRow==1){
         printf("No Java process found, exiting...\n");
         exit(1);
     }else if(printRow==2){
-        userselection=1;
+        userselection=0;
     }else{
         printf("Select a Java Process to monitor: ");
         scanf("%d",&userselection);
-    }
-    if(arr_javas[userselection-1] && arr_javas[userselection-1][0] != '\0'){
-        for(int i=0; i<strlen(arr_javas[userselection - 1]); i++){
-            javapid[i]=arr_javas[userselection - 1][i];
+        if(userselection>0){
+            userselection-=1;
         }
-        javapid[strlen(arr_javas[userselection - 1])]='\0';
-        return javapid;
-    } else{
-        printf("\nError...\n");
-        exit(1);
+        if(userselection>=printRow-1){
+            printf("\nBad selection, exiting...\n");
+            exit(1);
+        }
     }
+    strncpy(javapid,arr_javas[userselection],19);
+    return javapid;
 }
 
 void *pollTopWindow(void *myargs){
+    const struct jtopWindowObjects *jtopWinData = myargs;
+    const char *javapid = jtopWinData->javapid;
     while(1){
         while(threadControl&&!sleepMode){
-            struct pollTopWinArgs *jtopWinData = myargs;
-            WINDOW *win_jtop = jtopWinData->win_jtop;
-            WINDOW *win_classcpu = jtopWinData->win_ctop;
-            char *javapid = jtopWinData->javapid;
-            int STACK_WIN_MAX_COL = jtopWinData->STACK_WIN_MAX_COL;
             getNewThreads(javapid);
             getStat(javapid);
             getStatus(javapid);
@@ -296,182 +308,310 @@ void *pollTopWindow(void *myargs){
             while(!threadControl){
                 sleep(1);
             }
-            printTop(win_jtop, cnt_threads, STACK_WIN_MAX_COL);
-
-            printClassCPU(win_classcpu);
-            sleep(5);
+            printTop(cnt_threads);
+            printClassCPU();
+            //sleep between processing interval
+            sleep(2);
         }
+        //sleep between sleeping interval
         sleep(1);
     }
     return NULL;
 }
 
-void toggleSleepMode(WINDOW *win_jtop, int STACK_WIN_MAX_COL){
+void toggleSleepMode(){
     if(sleepMode){
-        wattron(win_jtop, A_BOLD);
-        wattron(win_jtop, COLOR_PAIR(6));
-        wmove(win_jtop, 1, 1);
-        char charwidth[STACK_WIN_MAX_COL];
-        memset(charwidth, ' ', sizeof(charwidth));
-        charwidth[STACK_WIN_MAX_COL-1]='\0';
-        mvwprintw(win_jtop, 1, 1, "%s", charwidth);
-        mvwprintw(win_jtop, 1, 1, " PID ");
-        mvwprintw(win_jtop, 1, 8, "STATE  ");
-        mvwprintw(win_jtop, 1, 16, "PCPU  ");
-        mvwprintw(win_jtop, 1, 23, "CCPU  ");
-        mvwprintw(win_jtop, 1, 30, "MinFault  ");
-        mvwprintw(win_jtop, 1, 41, "MajFault  ");
-        mvwprintw(win_jtop, 1, 52, "SECS  ");
-        mvwprintw(win_jtop, 1, 60, "cVS ");
-        mvwprintw(win_jtop, 1, 65, "cNVS ");
-        mvwprintw(win_jtop, 1, 70, "BLK  ");
-        mvwprintw(win_jtop, 1, 75, "Name                 ");
-        mvwprintw(win_jtop, 1, 102, "Command  ");
-        //mvwchgat(win_jtop,"test1001");
-        wattroff(win_jtop, A_BOLD);
-        wattroff(win_jtop, COLOR_PAIR(6));
+        wattron(jtopWindows.win_jtop, A_BOLD);
+        wattron(jtopWindows.win_jtop, COLOR_PAIR(6));
+        wmove(jtopWindows.win_jtop, 1, 1);
+
+        char charwidth[jtopWindows.JTOP_WIN_MAX_COL];
+        memset(charwidth, '\0', jtopWindows.JTOP_WIN_MAX_COL);
+        memset(charwidth, ' ', jtopWindows.JTOP_WIN_MAX_COL-1);
+        mvwprintw(jtopWindows.win_jtop, 1, 1, "%s", charwidth);
+
+        mvwprintw(jtopWindows.win_jtop, 1, 1, " PID ");
+        mvwprintw(jtopWindows.win_jtop, 1, 8, "STATE  ");
+        mvwprintw(jtopWindows.win_jtop, 1, 16, "PCPU  ");
+        mvwprintw(jtopWindows.win_jtop, 1, 23, "CCPU  ");
+        mvwprintw(jtopWindows.win_jtop, 1, 30, "MinFault  ");
+        mvwprintw(jtopWindows.win_jtop, 1, 41, "MajFault  ");
+        mvwprintw(jtopWindows.win_jtop, 1, 52, "SECS  ");
+        mvwprintw(jtopWindows.win_jtop, 1, 60, "cVS ");
+        mvwprintw(jtopWindows.win_jtop, 1, 65, "cNVS ");
+        mvwprintw(jtopWindows.win_jtop, 1, 70, "BLK  ");
+        mvwprintw(jtopWindows.win_jtop, 1, 75, "Name                 ");
+        mvwprintw(jtopWindows.win_jtop, 1, 102, "Command  ");
+        wattroff(jtopWindows.win_jtop, A_BOLD);
+        wattroff(jtopWindows.win_jtop, COLOR_PAIR(6));
         use_default_colors();
         sleepMode=false;
     }else{
         sleepMode=true;
-        wattron(win_jtop, A_BOLD);
-        wattron(win_jtop, COLOR_PAIR(4));
-        wmove(win_jtop, 1, 1);
-        char charwidth[STACK_WIN_MAX_COL];
-        memset(charwidth, ' ', sizeof(charwidth));
-        charwidth[STACK_WIN_MAX_COL-1]='\0';
-        mvwprintw(win_jtop, 1, 1, "%s", charwidth);
-        mvwprintw(win_jtop, 1, 1, " PID ");
-        mvwprintw(win_jtop, 1, 8, "STATE  ");
-        mvwprintw(win_jtop, 1, 16, "PCPU  ");
-        mvwprintw(win_jtop, 1, 23, "CCPU  ");
-        mvwprintw(win_jtop, 1, 30, "MinFault  ");
-        mvwprintw(win_jtop, 1, 41, "MajFault  ");
-        mvwprintw(win_jtop, 1, 52, "SECS  ");
-        mvwprintw(win_jtop, 1, 60, "cVS ");
-        mvwprintw(win_jtop, 1, 65, "cNVS ");
-        mvwprintw(win_jtop, 1, 70, "BLK  ");
-        mvwprintw(win_jtop, 1, 75, "Name                 ");
-        mvwprintw(win_jtop, 1, 102, "Command  ");
-        //mvwchgat(win_jtop,"test1001");
-        wattroff(win_jtop, A_BOLD);
-        wattroff(win_jtop, COLOR_PAIR(6));
+        wattron(jtopWindows.win_jtop, A_BOLD);
+        wattron(jtopWindows.win_jtop, COLOR_PAIR(4));
+        wmove(jtopWindows.win_jtop, 1, 1);
+
+        char charwidth[jtopWindows.JTOP_WIN_MAX_COL];
+        memset(charwidth, '\0', jtopWindows.JTOP_WIN_MAX_COL);
+        memset(charwidth, ' ', jtopWindows.JTOP_WIN_MAX_COL-1);
+        mvwprintw(jtopWindows.win_jtop, 1, 1, "%s", charwidth);
+
+        mvwprintw(jtopWindows.win_jtop, 1, 1, " PID ");
+        mvwprintw(jtopWindows.win_jtop, 1, 8, "STATE  ");
+        mvwprintw(jtopWindows.win_jtop, 1, 16, "PCPU  ");
+        mvwprintw(jtopWindows.win_jtop, 1, 23, "CCPU  ");
+        mvwprintw(jtopWindows.win_jtop, 1, 30, "MinFault  ");
+        mvwprintw(jtopWindows.win_jtop, 1, 41, "MajFault  ");
+        mvwprintw(jtopWindows.win_jtop, 1, 52, "SECS  ");
+        mvwprintw(jtopWindows.win_jtop, 1, 60, "cVS ");
+        mvwprintw(jtopWindows.win_jtop, 1, 65, "cNVS ");
+        mvwprintw(jtopWindows.win_jtop, 1, 70, "BLK  ");
+        mvwprintw(jtopWindows.win_jtop, 1, 75, "Name                 ");
+        mvwprintw(jtopWindows.win_jtop, 1, 102, "Command  ");
+        wattroff(jtopWindows.win_jtop, A_BOLD);
+        wattroff(jtopWindows.win_jtop, COLOR_PAIR(6));
         use_default_colors();
-        wrefresh(win_jtop);
+        wrefresh(jtopWindows.win_jtop);
     }
 }
 
-void toggleFilterMode(WINDOW *win_stack, WINDOW *win_jtop, int STACK_WIN_MAX_LINE, int cnt_win_stack_rows, char *arr_stacklines[], int cnt_win_stack_rows_filt, char *arr_stacklines_filt[], const int *STACK_WIN_MAX_COL){
+void toggleOrderBy(){
+    if(orderMode==0){
+        orderMode=1;
+    }else{
+        orderMode=0;
+    }
+}
+
+void toggleFilterMode(){
     if(filterMode){
         filterMode=false;
-        printJavaStack(win_stack, cnt_win_stack_rows, arr_stacklines, STACK_WIN_MAX_LINE);
-        printTop(win_jtop, cnt_threads,*STACK_WIN_MAX_COL);
     }else{
         filterMode=true;
-        printJavaStack(win_stack, cnt_win_stack_rows_filt, arr_stacklines_filt, STACK_WIN_MAX_LINE);
-        printTop(win_jtop, cnt_threads, *STACK_WIN_MAX_COL);
     }
+    printJavaStack();
+    printTop(cnt_threads);
 }
 
-void scrollUp(WINDOW *win_stack, WINDOW *win_jtop, int *cnt_scroll, char *arr_stacklines[], char *arr_stacklines_filt[], const int *STACK_WIN_MAX_COL, int *cnt_win_stack_rows, const int *STACK_WIN_MAX_LINE){
+void stackWindowScrollUp(int *cnt_scroll){
     if(focusOn==0){
-        if(*cnt_scroll>0){
-            if (*cnt_scroll < 6) {
-                *cnt_scroll = 0;
-            } else {
-                *cnt_scroll -= 5;
-            }
-            if (wscrl(win_stack, -5) == OK) {
-                int ii = *cnt_scroll;
+        if(*cnt_scroll==0){
+            return;
+        }
+        if (*cnt_scroll < 6) {
+            *cnt_scroll = 0;
+        } else {
+            *cnt_scroll -= 5;
+        }
+        if (wscrl(jtopWindows.win_stack, -5) != OK) {
+            return;
+        }
+        int ii = *cnt_scroll;
 
-                wmove(win_stack, 5, 1);
-                wclrtoeol(win_stack);
+        wmove(jtopWindows.win_stack, 5, 1);
+        wclrtoeol(jtopWindows.win_stack);
 
-                for (int i = 0; i < 5; i++) {
-                    if(filterMode){
-                        mvwprintw(win_stack, (i + 1), 1, "%s", arr_stacklines_filt[ii]);
-                    }else{
-                        mvwprintw(win_stack, (i + 1), 1, "%s", arr_stacklines[ii]);
-                    }
-                    ii++;
-                }
+        for (int i = 0; i < 5; i++) {
+            if(filterMode){
+                mvwprintw(jtopWindows.win_stack, (i + 1), 1, "%d: %s", ii, javaThreadDump.arr_stacklines_filt[ii]);
+            }else{
+                mvwprintw(jtopWindows.win_stack, (i + 1), 1, "%d: %s", ii, javaThreadDump.arr_stacklines[ii]);
             }
+            ii++;
         }
     }else if(focusOn==1){
         topActiveRow--;
         if(topActiveRow<0){
             topActiveRow=0;
         }
-        printTop(win_jtop, cnt_threads, *STACK_WIN_MAX_COL);
-        printJavaThreadStack(win_stack, arr_jthreads[topActiveRow].name, *cnt_win_stack_rows, arr_stacklines, *STACK_WIN_MAX_LINE);
+        printTop(cnt_threads);
+        printJavaThreadStack(jtopWindows.win_stack, arr_jthreads[topActiveRow].name, javaThreadDump.arr_stacklines, jtopWindows.STACK_WIN_MAX_LINE);
     }
 }
 
-void scrollDown(WINDOW *win_stack, WINDOW *win_jtop, int *cnt_scroll, char *arr_stacklines[], char *arr_stacklines_filt[], int *cnt_win_stack_rows, const int *STACK_WIN_MAX_LINE, const int *JTOP_WIN_MAX_LINE, const int *STACK_WIN_MAX_COL){
+void stackWindowScrollDown(int *cnt_scroll){
     if(focusOn==0){
-        if(*cnt_scroll<(*cnt_win_stack_rows-*STACK_WIN_MAX_LINE)-6){
-            *cnt_scroll += 5;
-            if (*cnt_scroll > (*cnt_win_stack_rows - *STACK_WIN_MAX_LINE) + 6) {
-                *cnt_scroll = (*cnt_win_stack_rows - *STACK_WIN_MAX_LINE) + 6;
-            }
-            if (wscrl(win_stack, 5) == OK) {
-                int startprintdata=*cnt_scroll+(*STACK_WIN_MAX_LINE-7);
-                int startprintline=*STACK_WIN_MAX_LINE-6;
+        unsigned int scroll_to = *cnt_scroll+5;
+        unsigned int max_scroll;
+        if(!filterMode) {
+            max_scroll = javaThreadDump.cnt_stacklines - jtopWindows.STACK_WIN_MAX_LINE;
+        }else {
+            max_scroll = javaThreadDump.cnt_stacklines_filt - jtopWindows.STACK_WIN_MAX_LINE;
+        }
+        if (scroll_to > max_scroll) {
+            scroll_to = max_scroll;
+        }
+        if(scroll_to==*cnt_scroll){
+            return;
+        }
 
-                wmove(win_stack, startprintline, 1);
-                wclrtoeol(win_stack);
+        //start scroll...
+        if (wscrl(jtopWindows.win_stack, 5) != OK) {
+            return;
+        }
 
-                for (int i = startprintline; i < startprintline+5; i++) {
-                    if(filterMode && arr_stacklines_filt[startprintdata]){
-                        mvwprintw(win_stack, i, 1, "%s", arr_stacklines_filt[startprintdata]);
-                    }else if(!filterMode && arr_stacklines[startprintdata]){
-                        mvwprintw(win_stack, i, 1, "%s", arr_stacklines[startprintdata]);
-                    }
-                    startprintdata++;
-                }
-                wrefresh(win_jtop);
+        const unsigned int window_offset = jtopWindows.STACK_WIN_MAX_LINE-6;
+        wmove(jtopWindows.win_stack, window_offset, 1);
+        wclrtoeol(jtopWindows.win_stack);
+        for (int i=0; i<5; i++) {
+            if(filterMode){
+                mvwprintw(jtopWindows.win_stack, window_offset+i, 1, "%d: %s", (scroll_to+window_offset+i), javaThreadDump.arr_stacklines_filt[scroll_to+window_offset+i+1]);
+            }else if(!filterMode){
+                mvwprintw(jtopWindows.win_stack, window_offset+i, 1, "%d: %s", (scroll_to+window_offset+i), javaThreadDump.arr_stacklines[scroll_to+window_offset+i+1]);
             }
         }
-    }else if(focusOn==1){
-        if(topActiveRow<cnt_threads-1){
-            topActiveRow++;
-            printTop(win_jtop, cnt_threads, *STACK_WIN_MAX_COL);
-            printJavaThreadStack(win_stack, arr_jthreads[topActiveRow].name, *cnt_win_stack_rows, arr_stacklines, *STACK_WIN_MAX_LINE);
+        wrefresh(jtopWindows.win_jtop);
+        *cnt_scroll=scroll_to;
+    }else if(focusOn==1 && topActiveRow<cnt_threads-1){
+        topActiveRow++;
+        printTop(cnt_threads);
+        printJavaThreadStack(jtopWindows.win_stack, arr_jthreads[topActiveRow].name, javaThreadDump.arr_stacklines, jtopWindows.STACK_WIN_MAX_LINE);
+    }
+}
+
+void navigateNextThread(int *cnt_scroll){
+    ////////////////////
+    // Next thread
+    ////////////////////
+    int search_cnt_scroll = *cnt_scroll + 2;
+    while (javaThreadDump.arr_stacklines[search_cnt_scroll] && javaThreadDump.arr_stacklines[search_cnt_scroll][0] != '"' && *cnt_scroll < javaThreadDump.cnt_stacklines) {
+        search_cnt_scroll++;
+    }
+
+    // validate search and print
+    if(javaThreadDump.arr_stacklines[search_cnt_scroll]){
+        //stackline exists
+        if(javaThreadDump.arr_stacklines[search_cnt_scroll][0] != '"'){
+            //search failed
+            *cnt_scroll = javaThreadDump.cnt_stacklines-10;
+        }else{
+            //success
+            *cnt_scroll = search_cnt_scroll;
         }
-        /*
-        if(topOffset<cnt_threads-(*JTOP_WIN_MAX_LINE-3)){
-            topOffset++;
-            printTop(win_jtop, topOffset, cnt_threads, *STACK_WIN_MAX_COL);
-            printJavaThreadStack(win_stack, arr_jthreads[topOffset].name, *cnt_win_stack_rows, arr_stacklines, *STACK_WIN_MAX_LINE);
+    }
+
+    // scroll and print
+    int ii = *cnt_scroll;
+    for (int i = 1; i < jtopWindows.STACK_WIN_MAX_LINE; i++) {
+        wmove(jtopWindows.win_stack, i, 1);
+        wclrtoeol(jtopWindows.win_stack);
+        if (ii>=0 && javaThreadDump.arr_stacklines[ii]) {
+            mvwprintw(jtopWindows.win_stack, i, 1, "%d: %s", (*cnt_scroll+i-1), javaThreadDump.arr_stacklines[ii]);
         }
-        */
+        ii++;
+    }
+}
+
+void navigatePreviousThread(int *cnt_scroll){
+    ////////////////////
+    // Previous thread
+    ////////////////////
+    int search_cnt_scroll = *cnt_scroll - 2;
+    while (search_cnt_scroll > 1 && javaThreadDump.arr_stacklines[search_cnt_scroll] && javaThreadDump.arr_stacklines[search_cnt_scroll][0] != '"' && cnt_scroll > 0) {
+        search_cnt_scroll--;
+    }
+
+    //validate search result
+    if(search_cnt_scroll > 1 && javaThreadDump.arr_stacklines[search_cnt_scroll]){
+        //stackline exists
+        if(javaThreadDump.arr_stacklines[search_cnt_scroll][0] != '"'){
+            //search failed
+            *cnt_scroll = 0;
+        }else{
+            //success
+            *cnt_scroll = search_cnt_scroll;
+        }
+    }
+
+    //scroll and print
+    int ii = *cnt_scroll;
+    for (int i = 1; i < jtopWindows.STACK_WIN_MAX_LINE; i++) {
+        wmove(jtopWindows.win_stack, i, 1);
+        wclrtoeol(jtopWindows.win_stack);
+        if (javaThreadDump.arr_stacklines[ii]) {
+            mvwprintw(jtopWindows.win_stack, i, 1, "%d: %s", (*cnt_scroll+i-1), javaThreadDump.arr_stacklines[ii]);
+        }
+        ii++;
+    }
+}
+
+void navigateSearchTerm(int *cnt_scroll, const char *searchTerm){
+    ////////////////////
+    // Search
+    ////////////////////
+    unsigned int search_cnt_scroll = 0;
+    unsigned int lastThreadPos=0;
+    while (search_cnt_scroll < javaThreadDump.cnt_stacklines
+            && javaThreadDump.arr_stacklines[search_cnt_scroll]
+            && !strstr(javaThreadDump.arr_stacklines[search_cnt_scroll],searchTerm))
+    {
+        if(javaThreadDump.arr_stacklines[search_cnt_scroll][0] == '"'){
+            lastThreadPos=search_cnt_scroll;
+        }
+        search_cnt_scroll++;
+    }
+    if(lastThreadPos>0 && javaThreadDump.arr_stacklines[search_cnt_scroll]){
+        //search success
+        *cnt_scroll = lastThreadPos;
+    }else{
+        //search failed
+        return;
+    }
+
+    // scroll and print
+    int ii = *cnt_scroll;
+    for (int i = 1; i < jtopWindows.STACK_WIN_MAX_LINE; i++) {
+        wmove(jtopWindows.win_stack, i, 1);
+        wclrtoeol(jtopWindows.win_stack);
+        if (ii>=0 && javaThreadDump.arr_stacklines[ii]) {
+            mvwprintw(jtopWindows.win_stack, i, 1, "%d: %s", (*cnt_scroll+i-1), javaThreadDump.arr_stacklines[ii]);
+        }
+        ii++;
+    }
+}
+
+void toggleActiveWindow(int *cnt_scroll){
+    ////////////////////
+    // Toggle controls
+    ////////////////////
+    if(focusOn==0){
+        *cnt_scroll=0;
+        focusOn=1;
+        printJavaThreadStack(jtopWindows.win_stack, arr_jthreads[topActiveRow].name, javaThreadDump.arr_stacklines, jtopWindows.STACK_WIN_MAX_LINE);
+    }else{
+        focusOn=0;
+        if(filterMode==true){
+            // Get the active line number...
+            int curlinenum = getLineJavaStack(arr_jthreads[topActiveRow].name, javaThreadDump.arr_stacklines_filt);
+            // Set the current line number to use...
+            *cnt_scroll=curlinenum-1;
+            // Print the trace...
+            printJavaStack();
+        }else{
+            // Get the active line number...
+            int curlinenum = getLineJavaStack(arr_jthreads[topActiveRow].name, javaThreadDump.arr_stacklines);
+            // Set the current line number to use...
+            *cnt_scroll=curlinenum-1;
+            // Print the trace...
+            printJavaStack();
+        }
     }
 }
 
 int main(int argc, char **argv) {
     int key_in;
     int cnt_scroll = 0;
-    unsigned int cntThreadRunning = 0;
-    unsigned int cntThreadWaiting = 0;
-    unsigned int cntThreadBlocked = 0;
-    unsigned int cnt_win_stack_rows = 0;
-    unsigned int cnt_win_stack_rows_filt = 0;
-    unsigned int parent_x, parent_y, new_x, new_y;
+    cntThreadRunning = 0;
+    cntThreadWaiting = 0;
+    cntThreadBlocked = 0;
+    javaThreadDump.cnt_stacklines = 0;
+    javaThreadDump.cnt_stacklines_filt = 0;
+    unsigned int parent_x;
+    unsigned int parent_y;
     unsigned int tstate_size = 3;
-    char *arr_stacklines[100000];
-    char *arr_stacklines_filt[100000];
     char *arr_exclude[2000];
     int cnt_exclude=0;
-    char searchString[256];
-    bool searchMode = 0;
-    bool pausedThreadReload = 0;
-    //mmap
-    struct sysinfo info;
-    sysinfo(&info);
-    const long int SYS_UPTIME = info.uptime;
-    long SYS_JIFFPS = sysconf(_SC_CLK_TCK);
-    const long int SYS_CURTIME = time(NULL);
-    const long int SYS_BOOTTIME = (SYS_CURTIME - SYS_UPTIME);
 
     struct arguments arguments;
     arguments.mode = STD_MODE;
@@ -495,14 +635,13 @@ int main(int argc, char **argv) {
     // GET Java PID
     char *javapid;
     javapid = arguments.procid;
-    jtopWinData.javapid = javapid;
+    jtopWindows.javapid = javapid;
 
     if(javapid==NULL){
-        //printf("No Java process specified...\n");
         javapid=malloc(200);
-        memset(javapid,0,sizeof(javapid));
+        memset(javapid,'\0',200);
         javapid = getJavaPid(javapid);
-        jtopWinData.javapid = javapid;
+        jtopWindows.javapid = javapid;
     }
 
     //////////////////////////////////////////////////
@@ -514,21 +653,28 @@ int main(int argc, char **argv) {
     keypad(stdscr, TRUE);
 
     getmaxyx(stdscr, parent_y, parent_x);
+    if(parent_x<=10){
+        parent_x=80;
+    }
+    if(parent_y<10){
+        parent_y=80;
+    }
     const int STACK_WIN_MAX_LINE = 20;
-    const int STACK_WIN_MAX_COL = (parent_x) - 1;
-    const int STACK_WIN_MAX_COLT = (parent_x/2);
-    const int JTOP_WIN_MAX_COL = parent_x;
-    jtopWinData.STACK_WIN_MAX_COL = STACK_WIN_MAX_COL;
-    const int JTOP_WIN_MAX_LINE = parent_y - tstate_size - 21;
-    jtopWinData.JTOP_WIN_MAX_LINE = JTOP_WIN_MAX_LINE;
+    jtopWindows.STACK_WIN_MAX_LINE = 20;
+    const unsigned int STACK_WIN_MAX_COL = (parent_x) - 1;
+    const unsigned int STACK_WIN_MAX_COLT = (parent_x/2);
+    jtopWindows.JTOP_WIN_MAX_COL = parent_x;
+    jtopWindows.STACK_WIN_MAX_COL = STACK_WIN_MAX_COLT;
+    const unsigned int JTOP_WIN_MAX_LINE = parent_y - tstate_size - 21;
+    jtopWindows.JTOP_WIN_MAX_LINE = JTOP_WIN_MAX_LINE;
     WINDOW *win_stack = newwin(STACK_WIN_MAX_LINE, STACK_WIN_MAX_COLT , 0, 0);
     WINDOW *win_ctop = newwin(STACK_WIN_MAX_LINE, STACK_WIN_MAX_COLT , 0, STACK_WIN_MAX_COLT+1);
     WINDOW *win_jtop = newwin(JTOP_WIN_MAX_LINE, parent_x, STACK_WIN_MAX_LINE, 0);
     WINDOW *win_tstate = newwin(tstate_size, parent_x, (parent_y - tstate_size) - 1, 0);
 
-    jtopWinData.win_stack = win_stack;
-    jtopWinData.win_jtop = win_jtop;
-    jtopWinData.win_ctop = win_ctop;
+    jtopWindows.win_stack = win_stack;
+    jtopWindows.win_jtop = win_jtop;
+    jtopWindows.win_ctop = win_ctop;
 
     start_color();
     init_pair(1, COLOR_GREEN, COLOR_BLACK);
@@ -538,6 +684,7 @@ int main(int argc, char **argv) {
     init_pair(5, COLOR_WHITE, COLOR_GREEN);
     init_pair(6, COLOR_WHITE, COLOR_BLUE);
     init_pair(7, COLOR_WHITE, COLOR_BLACK);
+    init_pair(8, COLOR_BLACK, COLOR_WHITE);
     wattron(win_jtop, A_BOLD);
     wattron(win_jtop, COLOR_PAIR(6));
     wmove(win_jtop, 1, 1);
@@ -557,7 +704,6 @@ int main(int argc, char **argv) {
     mvwprintw(win_jtop, 1, 70, "BLK  ");
     mvwprintw(win_jtop, 1, 75, "Name                 ");
     mvwprintw(win_jtop, 1, 102, "Command  ");
-    //mvwchgat(win_jtop,"test1001");
     wattroff(win_jtop, A_BOLD);
     wattroff(win_jtop, COLOR_PAIR(6));
     use_default_colors();
@@ -569,7 +715,7 @@ int main(int argc, char **argv) {
     box(win_stack, 0, 0);
     box(win_jtop, 0, 0);
     box(win_tstate, 0, 0);
-    mvprintw((parent_y - 1), 0, "F3 Search | [N]ext Thread | [T]oggle Window | [P]ause | [F]ilter Stack | [G]et Stack | [Q]uit");
+    mvprintw((parent_y - 1), 0, "F3 / Search | [N]ext Thread | [T]oggle Window | [P]ause | [F]ilter Stack | [G]et Stack | [Q]uit");
     refresh();
     wrefresh(win_stack);
     wrefresh(win_jtop);
@@ -584,7 +730,7 @@ int main(int argc, char **argv) {
     //////////////////////////////////////////////////
 
     pthread_t pollTopThread;
-    if(pthread_create(&pollTopThread, NULL, pollTopWindow, &jtopWinData)) {
+    if(pthread_create(&pollTopThread, NULL, pollTopWindow, &jtopWindows)) {
         mvwprintw(win_stack, 2, 1, "Error creating thread...");
         wrefresh(win_stack);
     }
@@ -597,16 +743,15 @@ int main(int argc, char **argv) {
     getExcludes(&cnt_exclude, arr_exclude);
 
     //populate stack lines from jcmd
-    getJavaStack(javapid, &cnt_win_stack_rows, arr_stacklines, STACK_WIN_MAX_COL, &cntThreadRunning, &cntThreadWaiting, &cntThreadBlocked, cnt_exclude, arr_exclude);
-    //waitpid();
+    getJavaStack(javapid, &cntThreadRunning, &cntThreadWaiting, &cntThreadBlocked, cnt_exclude, arr_exclude);
 
     //populate fileterd stack lines from stackline array
-    getJavaStackFiltered(cnt_win_stack_rows, &cnt_win_stack_rows_filt, cnt_exclude, arr_exclude, arr_stacklines, arr_stacklines_filt);
+    getJavaStackFiltered(cnt_exclude, arr_exclude);
 
     //////////////////////////////////////////////////
     // Print Stack...
     //////////////////////////////////////////////////
-    printJavaStack(win_stack, cnt_win_stack_rows, arr_stacklines, STACK_WIN_MAX_LINE);
+    printJavaStack();
     wattron(win_stack, A_BOLD);
     wattron(win_stack, COLOR_PAIR(7));
     box(win_stack, 0, 0);
@@ -618,10 +763,7 @@ int main(int argc, char **argv) {
     //////////////////////////////////////////////////
     // print the thread status bar...
     //////////////////////////////////////////////////
-    char *bars[1000];
-    int waste=20;
     int pct_running = cntThreadRunning*50/(cnt_threads-1);
-    //int pct_waiting = cntThreadWaiting*50/(cnt_threads-1);
     int pct_waiting = (cnt_threads-cntThreadRunning-cntThreadBlocked)*50/(cnt_threads-1);
     int pct_blocked = cntThreadBlocked*50/(cnt_threads-1);
     int ix = 1;
@@ -704,197 +846,81 @@ int main(int argc, char **argv) {
         threadControl=true;
         key_in = getch();
         threadControl=false;
-        //mvwprintw(win_stack, 1, 1, "pressed key id: %d", key_in);
-        if (searchMode == 1) {
-            if (key_in == 104) {
-                ////////////////////
-                //run search
-                ////////////////////
-                int search_cnt_scroll = cnt_scroll;
-                search_cnt_scroll += 1;
-                while (!strstr(arr_stacklines[search_cnt_scroll], searchString) ||
-                       search_cnt_scroll == cnt_scroll + 1) {
-                    search_cnt_scroll++;
-                }
-                if (search_cnt_scroll > cnt_scroll) {
-                    if ((search_cnt_scroll > cnt_win_stack_rows - STACK_WIN_MAX_LINE)) {
-                        cnt_scroll = cnt_win_stack_rows - STACK_WIN_MAX_LINE;
-                    } else {
-                        cnt_scroll = search_cnt_scroll - 1;
-                    }
-                    int ii = cnt_scroll;
-                    for (int i = 0; i < STACK_WIN_MAX_LINE; i++) {
-                        if (arr_stacklines[ii]) {
-                            mvwprintw(win_stack, (i + 1), 1, "%s", arr_stacklines[ii]);
-                            ii++;
-                        }
-                    }
-                }
-            } else {
-                //append and print string
-                //strcat(searchString, &key_in);
-                //mvwprintw(win_stack, (STACK_WIN_MAX_LINE + 1), 1, "CHECK A CHECK: %s\n", key_in);
-                //mvwprintw(win_stack, (STACK_WIN_MAX_LINE - 1), 1, "Search: %s\n", key_in);
-            }
-        }else if (key_in == 113) {
-            ////////////////////
-            //quit out
-            ////////////////////
+        mvwprintw(win_stack, 1, 1, "pressed key id: %d", key_in);
+        if (key_in == 27 || key_in == 113) {
+            //quit out (Esc)
+            //quit out (q)
             break;
         } else if (key_in == 112) {
-            ////////////////////////////////////////
-            // Toggle sleep mode
-            ////////////////////////////////////////
-            toggleSleepMode(win_jtop, STACK_WIN_MAX_COL);
+            // Toggle sleep mode (p)
+            toggleSleepMode();
         } else if (key_in == 115) {
-            ////////////////////////////////////////
-            // Toggle order by
-            ////////////////////////////////////////
-            if(orderMode==0){
-                orderMode=1;
-            }else{
-                orderMode=0;
-            }
+            // o
+            toggleOrderBy();
         } else if (key_in == 102) {
-            ////////////////////////////////////////
-            // Toggle filter mode
-            ////////////////////////////////////////
-            toggleFilterMode(win_stack, win_jtop, STACK_WIN_MAX_LINE, cnt_win_stack_rows, arr_stacklines, cnt_win_stack_rows_filt, arr_stacklines_filt, &STACK_WIN_MAX_COL);
+            // f
+            toggleFilterMode();
         } else if (key_in == 259 || key_in == 107) {
-            ////////////////////
-            //scroll up
-            ////////////////////
-            scrollUp(win_stack, win_jtop, &cnt_scroll, arr_stacklines, arr_stacklines_filt, &STACK_WIN_MAX_COL, &cnt_win_stack_rows, &STACK_WIN_MAX_LINE);
-        } else if (key_in == 258 || key_in == 108) {
-            ////////////////////
-            //scroll down
-            ////////////////////
-            scrollDown(win_stack, win_jtop, &cnt_scroll, arr_stacklines, arr_stacklines_filt, &cnt_win_stack_rows, &STACK_WIN_MAX_LINE, &JTOP_WIN_MAX_LINE, &STACK_WIN_MAX_COL);
+            // up
+            stackWindowScrollUp(&cnt_scroll);
+        } else if (key_in == 258 || key_in == 108 || key_in == 117) {
+            // down
+            stackWindowScrollDown(&cnt_scroll);
         } else if (key_in == 110) {
-            ////////////////////
-            // Next thread
-            ////////////////////
-            int search_cnt_scroll = cnt_scroll + 2;
-            while (arr_stacklines[search_cnt_scroll] && arr_stacklines[search_cnt_scroll][0] != '"' && cnt_scroll < cnt_win_stack_rows) {
-                search_cnt_scroll++;
-            }
-
-            // validate search and print
-            if(arr_stacklines[search_cnt_scroll]){
-                //stackline exists
-                if(arr_stacklines[search_cnt_scroll][0] != '"'){
-                    //search failed
-                    cnt_scroll = cnt_win_stack_rows-10;
-                }else{
-                    //success
-                    cnt_scroll = search_cnt_scroll;
-                }
-            }
-
-            // scroll and print
-            int ii = cnt_scroll;
-            for (int i = 1; i < STACK_WIN_MAX_LINE; i++) {
-                wmove(win_stack, i, 1);
-                wclrtoeol(win_stack);
-                if (arr_stacklines[ii]) {
-                    mvwprintw(win_stack, i, 1, "%s", arr_stacklines[ii]);
-                }
-                ii++;
-            }
+            // n
+            navigateNextThread(&cnt_scroll);
         } else if (key_in == 78) {
-            ////////////////////
-            // Previous thread
-            ////////////////////
-            int search_cnt_scroll = cnt_scroll - 2;
-            while (arr_stacklines[search_cnt_scroll] && arr_stacklines[search_cnt_scroll][0] != '"' && cnt_scroll > 0) {
-                search_cnt_scroll--;
-            }
-
-            //validate search result
-            if(arr_stacklines[search_cnt_scroll]){
-                //stackline exists
-                if(arr_stacklines[search_cnt_scroll][0] != '"'){
-                    //search failed
-                    //flash();
-                    //beep();
-                    cnt_scroll = 0;
-                }else{
-                    //success
-                    cnt_scroll = search_cnt_scroll;
-                }
-            }
-
-            //scroll and print
-            int ii = cnt_scroll;
-            for (int i = 1; i < STACK_WIN_MAX_LINE; i++) {
-                wmove(win_stack, i, 1);
-                wclrtoeol(win_stack);
-                if (arr_stacklines[ii]) {
-                    mvwprintw(win_stack, i, 1, "%s", arr_stacklines[ii]);
-                }
-                ii++;
-            }
+            // Shift+n
+            navigatePreviousThread(&cnt_scroll);
         } else if (key_in == 116) {
-            ////////////////////
-            // Toggle controls
-            ////////////////////
-            if(focusOn==0){
-                cnt_scroll=0;
-                focusOn=1;
-                printJavaThreadStack(win_stack, arr_jthreads[topActiveRow].name, cnt_win_stack_rows, arr_stacklines, STACK_WIN_MAX_LINE);
-            }else{
-                focusOn=0;
-                if(filterMode){
-                    // Get the active line number...
-                    int curlinenum = getLineJavaStack(cnt_win_stack_rows_filt, arr_jthreads[topActiveRow].name, arr_stacklines_filt);
-                    // Set the current line number to use...
-                    cnt_scroll=curlinenum-1;
-                    // Print the trace...
-                    printJavaStack(win_stack, cnt_win_stack_rows_filt, arr_stacklines_filt, STACK_WIN_MAX_LINE);
-                }else{
-                    // Get the active line number...
-                    int curlinenum = getLineJavaStack(cnt_win_stack_rows, arr_jthreads[topActiveRow].name, arr_stacklines);
-                    // Set the current line number to use...
-                    //cnt_scroll=curlinenum-1;
-                    // Print the trace...
-                    printJavaStack(win_stack, cnt_win_stack_rows, arr_stacklines, STACK_WIN_MAX_LINE);
-                    int limitloop=0;
-                    while (cnt_scroll <= (curlinenum-5) && limitloop<100){
-                        scrollDown(win_stack, win_jtop, &cnt_scroll, arr_stacklines, arr_stacklines_filt, &cnt_win_stack_rows, &STACK_WIN_MAX_LINE, &JTOP_WIN_MAX_LINE, &STACK_WIN_MAX_COL);
-                        limitloop++;
-                    }
-                }
-            }
+            // Toggle Window Control
+            toggleActiveWindow(&cnt_scroll);
         } else if (key_in == 103) {
             ////////////////////
             // Get new stack from java...
             ////////////////////
-            pausedThreadReload=1;
             cnt_scroll=0;
-            getJavaStack(javapid, &cnt_win_stack_rows, arr_stacklines, STACK_WIN_MAX_COL, &cntThreadRunning, &cntThreadWaiting, &cntThreadBlocked, cnt_exclude, arr_exclude);
+            getJavaStack(javapid, &cntThreadRunning, &cntThreadWaiting, &cntThreadBlocked, cnt_exclude, arr_exclude);
             box(win_stack, 0, 0);
             wrefresh(win_stack);
-            if(filterMode){
-                printJavaStack(win_stack, cnt_win_stack_rows_filt, arr_stacklines_filt, STACK_WIN_MAX_LINE);
-            }else{
-                printJavaStack(win_stack, cnt_win_stack_rows, arr_stacklines, STACK_WIN_MAX_LINE);
-            }
-            getJavaStackFiltered(cnt_win_stack_rows, &cnt_win_stack_rows_filt, cnt_exclude, arr_exclude, arr_stacklines, arr_stacklines_filt);
-        } else if (key_in == 47) {
-            ////////////////////
-            //search input
-            ////////////////////
+            printJavaStack();
+            getJavaStackFiltered(cnt_exclude, arr_exclude);
+        } else if (key_in == 47 || key_in == 267) {
+            //search input = '/' or 'F3'
             sleepMode=true;
-            searchMode = 1;
-            mvwprintw(win_stack, (STACK_WIN_MAX_LINE - 1), 1, "Search: \n");
-            echo();
+            wattron(jtopWindows.win_stack, A_BOLD);
+            wattron(jtopWindows.win_stack, COLOR_PAIR(8));
+            wmove(jtopWindows.win_stack, (jtopWindows.STACK_WIN_MAX_LINE - 2), 1);
+            wclrtoeol(jtopWindows.win_stack);
+
+            char stackwinwidth[jtopWindows.STACK_WIN_MAX_COL-1];
+            memset(stackwinwidth, '\0', jtopWindows.STACK_WIN_MAX_COL-1);
+            memset(stackwinwidth, ' ', jtopWindows.STACK_WIN_MAX_COL-2);
+            mvwprintw(jtopWindows.win_stack, (jtopWindows.STACK_WIN_MAX_LINE - 2), 1, "%s", stackwinwidth);
+
+            wmove(jtopWindows.win_stack, (jtopWindows.STACK_WIN_MAX_LINE - 2), 1);
+            mvwprintw(jtopWindows.win_stack, (jtopWindows.STACK_WIN_MAX_LINE - 2), 1, "Search: \n");
             curs_set(2);
-            setsyx((STACK_WIN_MAX_LINE - 1), 8);
-            wmove(win_stack, (STACK_WIN_MAX_LINE - 1), 8);
-            wclrtoeol(win_stack);
-            wrefresh(win_stack);
-            wgetch(win_stack);
+            wrefresh(jtopWindows.win_stack);
+            char searchTerm[100];
+            wmove(jtopWindows.win_stack, (jtopWindows.STACK_WIN_MAX_LINE - 2), 9);
+            keypad(jtopWindows.win_stack, TRUE);
+            echo();
+            mvwscanw(jtopWindows.win_stack, (jtopWindows.STACK_WIN_MAX_LINE - 2), 9, "%s", searchTerm);
+
+            // back to normal
+            wattroff(jtopWindows.win_stack, A_BOLD);
+            wattroff(jtopWindows.win_stack, COLOR_PAIR(6));
+            use_default_colors();
+            sleepMode=false;
+            noecho();
+            curs_set(0);
+            keypad(stdscr, TRUE);
+            wrefresh(jtopWindows.win_stack);
             refresh();
+
+            navigateSearchTerm(&cnt_scroll, searchTerm);
+
         }
         ////////////////////
         ////////////////////
@@ -918,7 +944,6 @@ int main(int argc, char **argv) {
             wattroff(win_jtop, COLOR_PAIR(7));
             use_default_colors();
         }
-        //box(win_side2, 0, 0);
         wrefresh(win_stack);
         wrefresh(win_jtop);
         refresh();
@@ -926,23 +951,13 @@ int main(int argc, char **argv) {
     //////////////////////////////////////////////////
     // Destroy it all...
     //////////////////////////////////////////////////
-    //kill(pid, SIGKILL);
-    //pthread_kill(pollTopThread, SIGKILL);
-    for (int i = 0; i < cnt_win_stack_rows; i++) {
-        free(arr_stacklines[i]);
+    sleepMode=1;
+    for (int i = 0; i <= javaThreadDump.cnt_stacklines; i++) {
+        free(javaThreadDump.arr_stacklines[i]);
     }
-    for (int i =0; i< cnt_exclude; i++){
+    for (int i =0; i<= cnt_exclude; i++){
         free(arr_exclude[cnt_exclude]);
     }
-    /*
-    for (int i = 0; i < cnt_threads; i++) {
-        if(arr_jthreads[i].command!=NULL){
-            free(arr_jthreads[i].command);
-        }
-        if(arr_jthreads[i].altcommand!=NULL){
-            free(arr_jthreads[i].altcommand);
-        }
-    }*/
     delwin(win_stack);
     delwin(win_tstate);
     endwin();

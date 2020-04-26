@@ -20,161 +20,182 @@
 
 #include "topWindow.h"
 
-int printTop(WINDOW *topwindow, int thread_count, int STACK_WIN_MAX_COL) {
-    //topActiveRow == global, current selected row from top menu
-    int printRow;
-    int topOffset=0; //which line to print from...
-    if(topActiveRow>=(jtopWinData.JTOP_WIN_MAX_LINE-3)){
-        topOffset = topActiveRow-(jtopWinData.JTOP_WIN_MAX_LINE-4);
+void clearLine(const unsigned int lineno){
+    char charwidth[jtopWindows.JTOP_WIN_MAX_COL];
+    memset(charwidth, '\0', sizeof(charwidth));
+    memset(charwidth, ' ', sizeof(charwidth)-1);
+    mvwprintw(jtopWindows.win_jtop, lineno, 1, "%s", charwidth);
+}
+
+void topPrintPid(const int threadID, const int row, int *col){
+    //PID
+    mvwprintw(jtopWindows.win_jtop, row, *col, "%s", arr_jthreads[threadID].pid);
+    *col+=7;
+}
+
+void topPrintState(const int threadID, const int row, int *col){
+    //STATE
+    if (arr_jthreads[threadID].state){
+        mvwprintw(jtopWindows.win_jtop, row, *col, "%s", arr_jthreads[threadID].state);
     }
-    //mvwprintw(topwindow, 1, 150, "%d", topOffset);
+    *col+=8;
+}
+
+void topPrintCPUInfo(const int threadID, const int row, int *col){
+    //PCPU
+    mvwprintw(jtopWindows.win_jtop, row, *col, "%0.2f", arr_jthreads[threadID].pcpu);
+    *col+=7;
+
+    //CCPU
+    mvwprintw(jtopWindows.win_jtop, row, *col, "%0.2f", arr_jthreads[threadID].ccpu);
+    *col+=7;
+}
+
+void topPrintFaultInfo(const int threadID, const int row, int *col){
+    //MinFault
+    mvwprintw(jtopWindows.win_jtop, row, *col, "%o", arr_jthreads[threadID].minfault);
+    *col+=11;
+
+    //MajFault
+    mvwprintw(jtopWindows.win_jtop, row, *col, "%o", arr_jthreads[threadID].majfault);
+    *col+=11;
+}
+
+void topPrintSecs(const int threadID, const int row, int *col){
+    //SECS
+    if(arr_jthreads[threadID].secs<9999999){
+        mvwprintw(jtopWindows.win_jtop, row, *col, "%d", arr_jthreads[threadID].secs);
+    }else{
+        mvwprintw(jtopWindows.win_jtop, row, *col, "E");
+    }
+    *col+=8;
+}
+
+void topPrintContextSwitch(const int threadID, const int row, int *col){
+    //Volantary Conext Switch
+    if (arr_jthreads[threadID].cc_switch_v<999){
+        mvwprintw(jtopWindows.win_jtop, row, *col, "%d", arr_jthreads[threadID].cc_switch_v);
+    }else {
+        mvwprintw(jtopWindows.win_jtop, row, *col, "M");
+    }
+    *col+=5;
+
+    //Non Volantary Conext Switch
+    if (arr_jthreads[threadID].cc_switch_nv<999){
+        mvwprintw(jtopWindows.win_jtop, row, *col, "%d", arr_jthreads[threadID].cc_switch_nv);
+    }else {
+        mvwprintw(jtopWindows.win_jtop, row, *col, "M");
+    }
+    *col+=5;
+}
+
+void topPrintBlocks(const int threadID, const int row, int *col){
+    //Blocking Count
+    if (arr_jthreads[threadID].blocking){
+        mvwprintw(jtopWindows.win_jtop, row, *col, "%d", arr_jthreads[threadID].blocking);
+    }else{
+        mvwprintw(jtopWindows.win_jtop, row, *col, "0");
+    }
+    *col+=5;
+}
+
+void topPrintName(const int threadID, const int row, int *col){
+    //Name
+    if (arr_jthreads[threadID].name && arr_jthreads[threadID].name[0] != '\0'){
+        mvwprintw(jtopWindows.win_jtop, row, *col, "%s", arr_jthreads[threadID].name);
+        if(strlen(arr_jthreads[threadID].name)>26){
+            mvwprintw(jtopWindows.win_jtop, row, *col+23, "... ");
+        }
+    }
+    *col+=27;
+}
+
+void topPrintCommand(const int threadID, const int row, int *col){
+    //Command
+    if(filterMode && arr_jthreads[threadID].altcommand && arr_jthreads[threadID].altcommand[0] != '\0'){
+        mvwprintw(jtopWindows.win_jtop, row, *col, "%s", arr_jthreads[threadID].altcommand);
+    }else if (arr_jthreads[threadID].command && arr_jthreads[threadID].command[0] != '\0'){
+        mvwprintw(jtopWindows.win_jtop, row, *col, "%s", arr_jthreads[threadID].command);
+    }else{
+        mvwprintw(jtopWindows.win_jtop, row, *col, "n/a          ");
+    }
+    *col+=97;
+}
+
+int printTop(int thread_count) {
+    int printRow;
+    int printCol=1;
+    int topOffset=0; //which line to print from...
+    if(topActiveRow>=(jtopWindows.JTOP_WIN_MAX_LINE-3)){
+        topOffset = topActiveRow-(jtopWindows.JTOP_WIN_MAX_LINE-4);
+    }
     for (int i = topOffset; i < thread_count; i++) {
         printRow=i+2;
         printRow-=topOffset;
 
+        if (!arr_jthreads[i].pid){
+            continue;
+        }
+
         //clear line...
-        wmove(topwindow, printRow, 1);
-        wclrtoeol(topwindow);
+        wmove(jtopWindows.win_jtop, printRow, 1);
+        wclrtoeol(jtopWindows.win_jtop);
 
         if(topActiveRow==i){
-            wattron(topwindow, COLOR_PAIR(5));
-
-            // print whole line...
-            char charwidth[STACK_WIN_MAX_COL];
-            memset(charwidth, ' ', sizeof(charwidth));
-            charwidth[STACK_WIN_MAX_COL-1]='\0';
-            mvwprintw(topwindow, printRow, 1, "%s", charwidth);
+            wattron(jtopWindows.win_jtop, COLOR_PAIR(5));
+            clearLine(printRow);
         }else if(arr_jthreads[i].blocking && arr_jthreads[i].blocking>1){
-            wattron(topwindow, COLOR_PAIR(3));
+            wattron(jtopWindows.win_jtop, COLOR_PAIR(3));
+            clearLine(printRow);
         }else if(arr_jthreads[i].blocking && arr_jthreads[i].blocking>0){
-            wattron(topwindow, COLOR_PAIR(2));
+            wattron(jtopWindows.win_jtop, COLOR_PAIR(2));
+            clearLine(printRow);
         }
 
-        if (arr_jthreads[i].pid){
+        printCol=1;
 
-            //PID
-            if (arr_jthreads[i].pid && arr_jthreads[i].pid[0] != '\0') {
-                mvwprintw(topwindow, printRow, 1, "%s", arr_jthreads[i].pid);
-            }
-
-            //STATE
-            if (arr_jthreads[i].state){
-                mvwprintw(topwindow, printRow, 8, "%s", arr_jthreads[i].state);
-            }else{
-                mvwprintw(topwindow, printRow, 8, "?");
-            }
-
-            //PCPU
-            mvwprintw(topwindow, printRow, 16, "%0.2f", arr_jthreads[i].pcpu);
-
-            //CCPU
-            mvwprintw(topwindow, printRow, 23, "%0.2f", arr_jthreads[i].ccpu);
-
-            //MinFault
-            mvwprintw(topwindow, printRow, 30, "%o", arr_jthreads[i].minfault);
-
-            //MajFault
-            mvwprintw(topwindow, printRow, 41, "%o", arr_jthreads[i].majfault);
-
-            //SECS
-            if(arr_jthreads[i].secs>9999999){
-                mvwprintw(topwindow, printRow, 52, "E");
-            }else{
-                mvwprintw(topwindow, printRow, 52, "%d", arr_jthreads[i].secs);
-            }
-
-            //SEGV
-            /*
-            if (arr_jthreads[i].segv && arr_jthreads[i].segv[0] != '\0'){
-                mvwprintw(topwindow, printRow, 60, "%s", arr_jthreads[i].segv);
-            }else{
-                mvwprintw(topwindow, printRow, 60, "0");
-            }
-            */
-
-            //Volantary Conext Switch
-            //if (arr_jthreads[i].cc_switch_v && arr_jthreads[i].cc_switch_v[0] != '\0'){
-            if (arr_jthreads[i].cc_switch_v){
-                mvwprintw(topwindow, printRow, 60, "%d", arr_jthreads[i].cc_switch_v);
-            }else {
-                mvwprintw(topwindow, printRow, 60, "0");
-            }
-
-            //Non Volantary Conext Switch
-            //if (arr_jthreads[i].cc_switch_nv && arr_jthreads[i].cc_switch_nv[0] != '\0'){
-            if (arr_jthreads[i].cc_switch_nv){
-                mvwprintw(topwindow, printRow, 65, "%d", arr_jthreads[i].cc_switch_nv);
-            }else {
-                mvwprintw(topwindow, printRow, 65, "0");
-            }
-
-            //Blocking Count
-            if (arr_jthreads[i].blocking){
-                mvwprintw(topwindow, printRow, 70, "%d", arr_jthreads[i].blocking);
-            }else{
-                mvwprintw(topwindow, printRow, 70, "0");
-            }
-
-            //Name
-            if (arr_jthreads[i].name && arr_jthreads[i].name[0] != '\0'){
-                mvwprintw(topwindow, printRow, 75, "%s", arr_jthreads[i].name);
-                if(strlen(arr_jthreads[i].name)>26){
-                    mvwprintw(topwindow, printRow, 98, "... ");
-                }
-            }else{
-                mvwprintw(topwindow, printRow, 75, "?");
-            }
-
-            //Command
-            if(filterMode && arr_jthreads[i].altcommand && arr_jthreads[i].altcommand[0] != '\0'){
-                mvwprintw(topwindow, printRow, 102, "%s", arr_jthreads[i].altcommand);
-            }else if (arr_jthreads[i].command && arr_jthreads[i].command[0] != '\0'){
-                mvwprintw(topwindow, printRow, 102, "%s", arr_jthreads[i].command);
-            }else{
-                mvwprintw(topwindow, printRow, 102, "n/a");
-            }
-
-            //raw cpu
-            //if (arr_jthreads[i].rawcpu!=NULL){
-            //    mvwprintw(topwindow, printRow, 173, "%s", arr_jthreads[i].rawcpu);
-            //}else{
-            //    mvwprintw(topwindow, printRow, 173, "?");
-            //}
-        }else{
-            mvwprintw(topwindow, printRow, 7, "pid null");
-        }
+        topPrintPid(i, printRow, &printCol);
+        topPrintState(i, printRow, &printCol);
+        topPrintCPUInfo(i, printRow, &printCol);
+        topPrintFaultInfo(i, printRow, &printCol);
+        topPrintSecs(i, printRow, &printCol);
+        topPrintContextSwitch(i, printRow, &printCol);
+        topPrintBlocks(i, printRow, &printCol);
+        topPrintName(i,printRow, &printCol);
+        topPrintCommand(i,printRow, &printCol);
 
         if(topActiveRow==i){
-            wattroff(topwindow, COLOR_PAIR(5));
+            wattroff(jtopWindows.win_jtop, COLOR_PAIR(5));
             use_default_colors();
         }else if(arr_jthreads[i].blocking && arr_jthreads[i].blocking>1){
-            wattroff(topwindow, COLOR_PAIR(3));
+            wattroff(jtopWindows.win_jtop, COLOR_PAIR(3));
             use_default_colors();
         }else if(arr_jthreads[i].blocking && arr_jthreads[i].blocking>0){
-            wattroff(topwindow, COLOR_PAIR(2));
+            wattroff(jtopWindows.win_jtop, COLOR_PAIR(2));
             use_default_colors();
         }
 
     }
 
     if(focusOn==0){
-        box(topwindow, 0, 0);
+        box(jtopWindows.win_jtop, 0, 0);
     }else{
-        wattron(topwindow, A_BOLD);
-        wattron(topwindow, COLOR_PAIR(7));
-        box(topwindow, 0, 0);
-        wattroff(topwindow, A_BOLD);
-        wattroff(topwindow, COLOR_PAIR(7));
+        wattron(jtopWindows.win_jtop, A_BOLD);
+        wattron(jtopWindows.win_jtop, COLOR_PAIR(7));
+        box(jtopWindows.win_jtop, 0, 0);
+        wattroff(jtopWindows.win_jtop, A_BOLD);
+        wattroff(jtopWindows.win_jtop, COLOR_PAIR(7));
         use_default_colors();
     }
-    wrefresh(topwindow);
+    wrefresh(jtopWindows.win_jtop);
     return 0;
 }
 
 void orderByCPU(){
-    int thread_count = cnt_threads;
+    unsigned int thread_count = cnt_threads;
     struct jthread tmp_jthread;
-    int cpufulli,cpufullii;
+    unsigned int cpufulli;
+    unsigned int cpufullii;
     for(int i=0; i<thread_count; i++){
         // set variables from Set A
         if(arr_jthreads[i].rawcpu){
@@ -207,9 +228,10 @@ void orderByCPU(){
 }
 
 void orderByBlocked(){
-    int thread_count = cnt_threads;
+    unsigned int thread_count = cnt_threads;
     struct jthread tmp_jthread;
-    int blockedi,blockedii;
+    unsigned int blockedi;
+    unsigned int blockedii;
     for(int i=0; i<thread_count; i++){
         // set variables from Set A
         blockedi=arr_jthreads[i].blocking;

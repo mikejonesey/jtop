@@ -60,13 +60,22 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+/*
+ * memory notes...
+ * mallocated variables...
+ * arr_exclude[N] = used to store excluded class, don't know the length of these...
+ * javaThreadDump.arr_stacklines[N] = used to store stack traces from java, don't know the length of these...
+ * everything else is pre-allocated.
+*/
+
+//struct defs
 struct jthread{
     char pid[10]; // Thread ID
     char name[256]; // Name of Thread / "C2 CompilerThread1"
     char state[10]; // Running / Sleeping / Zombie...
     double pcpu; // CPU Usage... 0.0
     double ccpu; // Sampled CPU Usage... 0.0
-    long minfault; // Minor page fault counter
+    unsigned long minfault; // Minor page fault counter
     long majfault; // Major page fault counter
     long secs; // Seconds running / 123
     char segv[2]; // not used
@@ -95,14 +104,28 @@ struct class_cpu{
     int totalcpu;
 };
 
-struct pollTopWinArgs{
+struct jtopWindowObjects{
     WINDOW *win_stack;
     WINDOW *win_jtop;
     WINDOW *win_ctop;
     char *javapid;
-    int JTOP_WIN_MAX_LINE;
-    int STACK_WIN_MAX_COL;
+    unsigned int JTOP_WIN_MAX_COL;
+    unsigned int JTOP_WIN_MAX_LINE;
+    unsigned int STACK_WIN_MAX_COL;
+    unsigned int STACK_WIN_MAX_LINE;
+    unsigned int stack_win_scroll_cnt;
 };
+
+struct struct_javaThreadDump{
+    unsigned int cnt_stacklines;
+    unsigned int cnt_stacklines_filt;
+    char *arr_stacklines[100000];
+    char *arr_stacklines_filt[100000];
+};
+
+//gvars
+struct jtopWindowObjects jtopWindows;
+struct struct_javaThreadDump javaThreadDump;
 
 int cnt_threads;
 int cnt_ignore_threads;
@@ -124,15 +147,8 @@ bool filterMode;
 int focusOn;
 int orderMode;
 
-struct pollTopWinArgs jtopWinData;
-
-//cmdline options
-static error_t parse_opt(int key, char *arg, struct argp_state *state);
-
-//prep
+//functions
 char *getJavaPid(char *javapid);
-
-//runtime
 void *pollTopWindow(void *myargs);
 int main(int argc, char **argv);
 

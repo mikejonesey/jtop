@@ -7,8 +7,8 @@
 
 #include "jtop.h"
 
-void updateClassInfo(int classccpu, char *ptr_classname);
-void printClassCPU(WINDOW *win_classcpu);
-void printBlocks(WINDOW *win_classcpu);
+void updateClassInfo(int classccpu, const char *ptr_classname);
+void printClassCPU();
+void printBlocks();
 
 #endif //JTOP_CLASSCPUWINDOW_H

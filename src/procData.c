@@ -20,7 +20,7 @@
 #include "procData.h"
 #include "classcpuWindow.h"
 
-void getStat(char *javapid){
+void getStat(const char *javapid){
     int thread_count = cnt_threads;
     char tstat_txt[1000];
     char tstat_path[256];
@@ -35,32 +35,29 @@ void getStat(char *javapid){
     int cnt_proc_stime=0;
     int cnt_proc_startime=0;
 
-    char proc_comm[100];
-    char proc_state[100];
-    char proc_minflt[100];
-    char proc_majflt[100];
-    char proc_utime[100];
-    char proc_stime[100];
-    char proc_startime[1000];
+    char proc_comm[100]="\0";
+    char proc_state[100]="\0";
+    char proc_minflt[100]="\0";
+    char proc_majflt[100]="\0";
+    char proc_utime[100]="\0";
+    char proc_stime[100]="\0";
+    char proc_startime[1000]="\0";
 
     struct sysinfo info;
     sysinfo(&info);
     const long int SYS_UPTIME = info.uptime;
     long SYS_JIFFPS = sysconf(_SC_CLK_TCK);
-    const long int SYS_CURTIME = time(NULL);
-    const long int SYS_BOOTTIME = (SYS_CURTIME - SYS_UPTIME);
 
     for(int i=0; i<thread_count; i++){
         if(arr_jthreads[i].pid && arr_jthreads[i].pid[0]!='\0'){
             //////////////////////////////////////////////////
             // Get new props
             //////////////////////////////////////////////////
-            strcat(tstat_path, "/proc/");
-            strcat(tstat_path, javapid);
-            strcat(tstat_path, "/task/");
-            //strcat(tstat_path, threads[i][0]);
-            strcat(tstat_path, arr_jthreads[i].pid);
-            strcat(tstat_path, "/stat");
+            strncpy(tstat_path, "/proc/", 255);
+            strncat(tstat_path, javapid, 255-strlen(tstat_path));
+            strncat(tstat_path, "/task/", 255-strlen(tstat_path));
+            strncat(tstat_path, arr_jthreads[i].pid, 255-strlen(tstat_path));
+            strncat(tstat_path, "/stat", 255-strlen(tstat_path));
             f_tstat = fopen(tstat_path, "r");
             if (f_tstat) {
                 fgets(tstat_txt, sizeof(tstat_txt), f_tstat);
@@ -78,7 +75,7 @@ void getStat(char *javapid){
                 memset(proc_startime, 0, sizeof(proc_startime));
                 if(tstat_txt&&strstr(tstat_txt," ")){
                     for(int filei=0; filei<512; filei++){
-                        if (space_count > 22||tstat_txt[filei]=='\0') {
+                        if (space_count > 21||tstat_txt[filei]=='\0') {
                             break;
                         }
                         if (tstat_txt[filei] == ')') {
@@ -91,12 +88,10 @@ void getStat(char *javapid){
                             continue;
                         }
                         //space_count==0 //pid
-                        if (space_count == 1) {
+                        if (space_count == 1 && tstat_txt[filei]!='(') {
                             //space_count==1 //comm
-                            if(tstat_txt[filei]!='('){
-                                proc_comm[cnt_proc_comm] = tstat_txt[filei];
-                                cnt_proc_comm++;
-                            }
+                            proc_comm[cnt_proc_comm] = tstat_txt[filei];
+                            cnt_proc_comm++;
                         }
                         if (space_count == 2) {
                             //state (R|S|D|Z|T|t|W|X|x|K|W|P)
@@ -142,9 +137,6 @@ void getStat(char *javapid){
                             proc_startime[cnt_proc_startime] = tstat_txt[filei];
                             cnt_proc_startime++;
                         }
-                        if(space_count>21){
-                            break;
-                        }
                         //space_count==22 //vsize
                         //space_count==23 //rss
                         //space_count==24 //rsslim
@@ -186,31 +178,31 @@ void getStat(char *javapid){
                     proc_startime[cnt_proc_startime]='\0';
 
                     if(strcmp(arr_jthreads[i].name, "New-thread")==0 && strcmp(proc_comm, "java")!= 0){
-                        strcpy(arr_jthreads[i].name, proc_comm);
+                        strncpy(arr_jthreads[i].name, proc_comm, sizeof(arr_jthreads[i].name)-1);
                     }
 
                     //state (R|S|D|Z|T|t|W|X|x|K|W|P)
                     if(arr_jthreads[i].state==NULL||strlen(arr_jthreads[i].state)<2){
                         if(proc_state[0]=='R'){
-                            strcpy(arr_jthreads[i].state, "RUNNING\0");
+                            strncpy(arr_jthreads[i].state, "RUNNING", sizeof(arr_jthreads[i].state)-1);
                             cntThreadRunning++;
                         }else if(proc_state[0]=='W'){
-                            strcpy(arr_jthreads[i].state, "WAITING\0");
+                            strncpy(arr_jthreads[i].state, "WAITING", sizeof(arr_jthreads[i].state)-1);
                             cntThreadWaiting++;
                         }else if(proc_state[0]=='B'){
-                            strcpy(arr_jthreads[i].state, "BLOCKED\0");
+                            strncpy(arr_jthreads[i].state, "BLOCKED", sizeof(arr_jthreads[i].state)-1);
                             cntThreadBlocked++;
                         }else if(proc_state[0]=='S'||proc_state[0]=='D') {
-                            strcpy(arr_jthreads[i].state, "SLEEP\0");
+                            strncpy(arr_jthreads[i].state, "SLEEP", sizeof(arr_jthreads[i].state)-1);
                             cntThreadWaiting++;
                         }else if(proc_state[0]=='T'){
-                            strcpy(arr_jthreads[i].state, "Trace\0");
+                            strncpy(arr_jthreads[i].state, "Trace", sizeof(arr_jthreads[i].state)-1);
                             cntThreadWaiting++;
                         }else if(proc_state[0]=='Z'){
-                            strcpy(arr_jthreads[i].state, "Zombie\0");
+                            strncpy(arr_jthreads[i].state, "Zombie", sizeof(arr_jthreads[i].state)-1);
                             cntThreadBlocked++;
                         }else if(proc_state[0]=='D'){
-                            strcpy(arr_jthreads[i].state, "Disk\0");
+                            strncpy(arr_jthreads[i].state, "Disk", sizeof(arr_jthreads[i].state)-1);
                         }
                     }
                     memset(proc_state, 0, sizeof(proc_state));
@@ -242,7 +234,7 @@ void getStat(char *javapid){
 
                     //calc CPU
                     int cputtime_last;
-                    if(proc_stime&&proc_utime){
+                    if(proc_stime[0]!='\0'&&proc_utime[0]!='\0'){
                         cnt_proc_stime=atoi(proc_stime);
                         cnt_proc_utime=atoi(proc_utime);
 
@@ -289,11 +281,9 @@ void getStat(char *javapid){
                 //////////////////////////////////////////////////
                 // process has finished already or unable to check (no file)
                 //////////////////////////////////////////////////
-                //command replace to path for debug:
-                //strcpy(arr_jthreads[i].command, tstat_path);
 
                 //status
-                strcpy(arr_jthreads[i].state, "CLOSED");
+                strncpy(arr_jthreads[i].state, "CLOSED", 9);
 
                 //minor page faults
                 arr_jthreads[i].minfault=0;
@@ -319,130 +309,165 @@ void getStat(char *javapid){
     }
 }
 
-void getStatus(char *javapid){
-    int thread_count = cnt_threads;
-    char tstatus_txt[4096];
-    char tstatus_path[256];
-    char binarySigCaught[100];
-    memset(tstatus_path, 0, sizeof(tstatus_path));
-    memset(binarySigCaught, 0, sizeof(binarySigCaught));
-    FILE *f_tstatus;
-
-    for(int i=0; i<thread_count; i++) {
-        if (arr_jthreads[i].pid != NULL) {
-            strcpy(tstatus_path, "/proc/");
-            strcat(tstatus_path, javapid);
-            strcat(tstatus_path, "/task/");
-            strcat(tstatus_path, arr_jthreads[i].pid);
-            strcat(tstatus_path, "/status");
-            f_tstatus = fopen(tstatus_path, "r");
-            if (f_tstatus) {
-                while (fgets(tstatus_txt, sizeof(tstatus_txt), f_tstatus)) {
-                    if(strstr(tstatus_txt,"SigCgt:")){
-                        int charpos=7;
-                        while(tstatus_txt[charpos]!='\0'){
-                            switch(tstatus_txt[charpos]){
-                                case '0': strcat(&binarySigCaught[charpos-7],"0000"); break;
-                                case '1': strcat(&binarySigCaught[charpos-7],"0001"); break;
-                                case '2': strcat(&binarySigCaught[charpos-7],"0010"); break;
-                                case '3': strcat(&binarySigCaught[charpos-7],"0011"); break;
-                                case '4': strcat(&binarySigCaught[charpos-7],"0100"); break;
-                                case '5': strcat(&binarySigCaught[charpos-7],"0101"); break;
-                                case '6': strcat(&binarySigCaught[charpos-7],"0110"); break;
-                                case '7': strcat(&binarySigCaught[charpos-7],"0111"); break;
-                                case '8': strcat(&binarySigCaught[charpos-7],"1000"); break;
-                                case '9': strcat(&binarySigCaught[charpos-7],"1001"); break;
-                                case 'A': strcat(&binarySigCaught[charpos-7],"1010"); break;
-                                case 'B': strcat(&binarySigCaught[charpos-7],"1011"); break;
-                                case 'C': strcat(&binarySigCaught[charpos-7],"1100"); break;
-                                case 'D': strcat(&binarySigCaught[charpos-7],"1101"); break;
-                                case 'E': strcat(&binarySigCaught[charpos-7],"1110"); break;
-                                case 'F': strcat(&binarySigCaught[charpos-7],"1111"); break;
-                                case 'a': strcat(&binarySigCaught[charpos-7],"1010"); break;
-                                case 'b': strcat(&binarySigCaught[charpos-7],"1011"); break;
-                                case 'c': strcat(&binarySigCaught[charpos-7],"1100"); break;
-                                case 'd': strcat(&binarySigCaught[charpos-7],"1101"); break;
-                                case 'e': strcat(&binarySigCaught[charpos-7],"1110"); break;
-                                case 'f': strcat(&binarySigCaught[charpos-7],"1111"); break;
-                            }
-                            charpos++;
-                        }
-                        binarySigCaught[charpos-7]='\0';
-                        if(binarySigCaught[strlen(binarySigCaught)-11]=='1'){
-                            //Sigsegv on thread...
-                            strcpy(arr_jthreads[i].segv,"Y");
-                        }else{
-                            strcpy(arr_jthreads[i].segv,"N");
-                        }
-                        //break;
-                    }
-                    if(strstr(tstatus_txt,"nonvoluntary_ctxt_switches:")){
-                        // save the non vol counter, and calculate a pct
-                        int istrpos = 0;
-                        int istrsav = 0;
-                        char tmpnvcs[1000];
-                        while(tstatus_txt[istrpos]!='\0'&&istrpos<1000){
-                            if(tstatus_txt[istrpos]<'0'||tstatus_txt[istrpos]>'9'){
-                                istrpos++;
-                                continue;
-                            }
-                            tmpnvcs[istrsav]=tstatus_txt[istrpos];
-                            istrpos++;
-                            istrsav++;
-                        }
-                        tmpnvcs[istrsav]='\0';
-                        long tmplnvcs=atol(tmpnvcs);
-                        int calcdiff=0;
-                        if (arr_jthreads[i].c_switch_nv){
-                            calcdiff = (tmplnvcs-arr_jthreads[i].c_switch_nv)/5;
-                        }
-                        arr_jthreads[i].c_switch_nv = tmplnvcs;
-                        arr_jthreads[i].cc_switch_nv = calcdiff;
-                    }else if(strstr(tstatus_txt,"voluntary_ctxt_switches:")){
-                        // save the vol count, and calc a pct
-                        int istrpos = 0;
-                        int istrsav = 0;
-                        char tmpvcs[1000];
-                        while(tstatus_txt[istrpos]!='\0'&&istrpos<1000){
-                            if(tstatus_txt[istrpos]<'0'||tstatus_txt[istrpos]>'9'){
-                                istrpos++;
-                                continue;
-                            }
-                            tmpvcs[istrsav]=tstatus_txt[istrpos];
-                            istrpos++;
-                            istrsav++;
-                        }
-                        tmpvcs[istrsav]='\0';
-                        long tmplvcs=atol(tmpvcs);
-                        int calcdiff=0;
-                        if (arr_jthreads[i].c_switch_v){
-                            calcdiff = (tmplvcs - arr_jthreads[i].c_switch_v)/5;
-                        }
-                        arr_jthreads[i].c_switch_v = tmplvcs;
-                        arr_jthreads[i].cc_switch_v = calcdiff;
-                    }
-                }
-                fclose(f_tstatus);
-            } else{
-                //failed to open status file...
-                //strcpy(threads[i][7],tstatus_path);
-            }
+void setThread_nonvoluntary_ctxt_switches(const unsigned int threadID, const char *status_txt){
+    int istrpos = 0;
+    int istrsav = 0;
+    char tmpnvcs[1000];
+    while(status_txt[istrpos]!='\0'&&istrpos<1000){
+        if(status_txt[istrpos]<'0'||status_txt[istrpos]>'9'){
+            istrpos++;
+            continue;
         }
+        tmpnvcs[istrsav]=status_txt[istrpos];
+        istrpos++;
+        istrsav++;
+    }
+    tmpnvcs[istrsav]='\0';
+    long tmplnvcs=atol(tmpnvcs);
+    int calcdiff=0;
+    if (arr_jthreads[threadID].c_switch_nv){
+        calcdiff = (tmplnvcs-arr_jthreads[threadID].c_switch_nv)/5;
+    }
+    arr_jthreads[threadID].c_switch_nv = tmplnvcs;
+    arr_jthreads[threadID].cc_switch_nv = calcdiff;
+}
+
+void setThread_voluntary_ctxt_switches(const unsigned int threadID, const char *status_txt){
+    int istrpos = 0;
+    int istrsav = 0;
+    char tmpvcs[1000];
+    while(status_txt[istrpos]!='\0'&&istrpos<1000){
+        if(status_txt[istrpos]<'0'||status_txt[istrpos]>'9'){
+            istrpos++;
+            continue;
+        }
+        tmpvcs[istrsav]=status_txt[istrpos];
+        istrpos++;
+        istrsav++;
+    }
+    tmpvcs[istrsav]='\0';
+    long tmplvcs=atol(tmpvcs);
+    int calcdiff=0;
+    if (arr_jthreads[threadID].c_switch_v){
+        calcdiff = (tmplvcs - arr_jthreads[threadID].c_switch_v)/5;
+    }
+    arr_jthreads[threadID].c_switch_v = tmplvcs;
+    arr_jthreads[threadID].cc_switch_v = calcdiff;
+}
+
+void setThread_sigcgt(const unsigned int threadID, const char *status_txt){
+    int charpos=7;
+    char binarySigCaught[100];
+    memset(binarySigCaught, 0, sizeof(binarySigCaught));
+    while(status_txt[charpos]!='\0'){
+        switch(status_txt[charpos]){
+            case '0':
+                strncat(binarySigCaught,"0000", 99-strlen(binarySigCaught)); break;
+            case '1':
+                strncat(binarySigCaught,"0001", 99-strlen(binarySigCaught)); break;
+            case '2':
+                strncat(binarySigCaught,"0010", 99-strlen(binarySigCaught)); break;
+            case '3':
+                strncat(binarySigCaught,"0011", 99-strlen(binarySigCaught)); break;
+            case '4':
+                strncat(binarySigCaught,"0100", 99-strlen(binarySigCaught)); break;
+            case '5':
+                strncat(binarySigCaught,"0101", 99-strlen(binarySigCaught)); break;
+            case '6':
+                strncat(binarySigCaught,"0110", 99-strlen(binarySigCaught)); break;
+            case '7':
+                strncat(binarySigCaught,"0111", 99-strlen(binarySigCaught)); break;
+            case '8':
+                strncat(binarySigCaught,"1000", 99-strlen(binarySigCaught)); break;
+            case '9':
+                strncat(binarySigCaught,"1001", 99-strlen(binarySigCaught)); break;
+            case 'A':
+                strncat(binarySigCaught,"1010", 99-strlen(binarySigCaught)); break;
+            case 'B':
+                strncat(binarySigCaught,"1011", 99-strlen(binarySigCaught)); break;
+            case 'C':
+                strncat(binarySigCaught,"1100", 99-strlen(binarySigCaught)); break;
+            case 'D':
+                strncat(binarySigCaught,"1101", 99-strlen(binarySigCaught)); break;
+            case 'E':
+                strncat(binarySigCaught,"1110", 99-strlen(binarySigCaught)); break;
+            case 'F':
+                strncat(binarySigCaught,"1111", 99-strlen(binarySigCaught)); break;
+            case 'a':
+                strncat(binarySigCaught,"1010", 99-strlen(binarySigCaught)); break;
+            case 'b':
+                strncat(binarySigCaught,"1011", 99-strlen(binarySigCaught)); break;
+            case 'c':
+                strncat(binarySigCaught,"1100", 99-strlen(binarySigCaught)); break;
+            case 'd':
+                strncat(binarySigCaught,"1101", 99-strlen(binarySigCaught)); break;
+            case 'e':
+                strncat(binarySigCaught,"1110", 99-strlen(binarySigCaught)); break;
+            case 'f':
+                strncat(binarySigCaught,"1111", 99-strlen(binarySigCaught)); break;
+            default:
+                break;
+        }
+        charpos++;
+    }
+    if(strlen(binarySigCaught)>11 && binarySigCaught[strlen(binarySigCaught)-11]=='1'){
+        //Sigsegv on thread...
+        strncpy(arr_jthreads[threadID].segv,"Y",1);
+    }else{
+        strncpy(arr_jthreads[threadID].segv,"N",1);
     }
 }
 
-void getNewThreads(char *javapid){
+void getStatus(const char *javapid){
+    int thread_count = cnt_threads;
+    char tstatus_txt[4096];
+    char tstatus_path[256];
+    memset(tstatus_path, 0, sizeof(tstatus_path));
+    FILE *f_tstatus;
+
+    for(int i=0; i<thread_count; i++) {
+        if (arr_jthreads[i].pid == NULL) {
+            continue;
+        }
+        strncpy(tstatus_path, "/proc/", 255);
+        strncat(tstatus_path, javapid, 255-strlen(tstatus_path));
+        strncat(tstatus_path, "/task/", 255-strlen(tstatus_path));
+        strncat(tstatus_path, arr_jthreads[i].pid, 255-strlen(tstatus_path));
+        strncat(tstatus_path, "/status", 255-strlen(tstatus_path));
+        f_tstatus = fopen(tstatus_path, "r");
+        if (!f_tstatus) {
+            return;
+        }
+
+        while (fgets(tstatus_txt, sizeof(tstatus_txt), f_tstatus)) {
+            if(strstr(tstatus_txt,"SigCgt:")){
+                // save signals
+                setThread_sigcgt(i,tstatus_txt);
+            }
+            if(strstr(tstatus_txt,"nonvoluntary_ctxt_switches:")){
+                // save the non vol counter, and calculate a pct
+                setThread_nonvoluntary_ctxt_switches(i,tstatus_txt);
+            }else if(strstr(tstatus_txt,"voluntary_ctxt_switches:")){
+                // save the vol count, and calc a pct
+                setThread_voluntary_ctxt_switches(i,tstatus_txt);
+            }
+        }
+        fclose(f_tstatus);
+    }
+}
+
+void getNewThreads(const char *javapid){
     char tstat_path[256];
     char tstat_txt[256];
     memset(tstat_path, 0, sizeof(tstat_path));
 
-    strcpy(tstat_path, "/proc/");
-    strcat(tstat_path, javapid);
-    strcat(tstat_path, "/task/");
+    strncpy(tstat_path, "/proc/", 255);
+    strncat(tstat_path, javapid, 255-strlen(tstat_path));
+    strncat(tstat_path, "/task/", 255-strlen(tstat_path));
 
     DIR *procdir;
     FILE *procfile;
-    struct dirent *tasklist;
+    const struct dirent *tasklist;
     procdir = opendir(tstat_path);
     if (procdir) {
         while ((tasklist = readdir(procdir)) != NULL) {
@@ -453,7 +478,6 @@ void getNewThreads(char *javapid){
                     }
                 }
                 int i = 0;
-                //char *okok = tasklist->d_name;
                 while (i < cnt_threads && !strstr(arr_jthreads[i].pid, tasklist->d_name) ) {
                     i++;
                 }
@@ -463,36 +487,44 @@ void getNewThreads(char *javapid){
                     // new thread found
 
                     //check what the process is
-                    strcpy(tstat_path, "/proc/");
-                    strcat(tstat_path, javapid);
-                    strcat(tstat_path, "/task/");
-                    strcat(tstat_path, tasklist->d_name);
-                    strcat(tstat_path, "/stat");
+                    strncpy(tstat_path, "/proc/", 255);
+                    strncat(tstat_path, javapid, 255-strlen(tstat_path));
+                    strncat(tstat_path, "/task/", 255-strlen(tstat_path));
+                    strncat(tstat_path, tasklist->d_name, 255-strlen(tstat_path));
+                    strncat(tstat_path, "/stat", 255-strlen(tstat_path));
                     procfile = fopen(tstat_path, "r");
-                    if (procfile) {
+                    if (procfile && cnt_threads < 9999) {
                         fgets(tstat_txt, sizeof(tstat_txt), procfile);
                         fclose(procfile);
-                        if (strstr(tstat_txt, " (java) ")) {
+                        if (strstr(tstat_txt, "(")) {
                             // add the thread
-                            strcpy(arr_jthreads[cnt_threads].pid, tasklist->d_name);
+                            strncpy(arr_jthreads[cnt_threads].pid, tasklist->d_name, 9);
                             if(strcmp(javapid,tasklist->d_name)==0){
-                                strcpy(arr_jthreads[cnt_threads].name, ">> JAVA <<");
+                                strncpy(arr_jthreads[cnt_threads].name, ">> JAVA <<", 255);
                             }else{
-                                strcpy(arr_jthreads[cnt_threads].name, "New-thread");
+                                const char *threadNameSearch = strstr(tstat_txt, "(");
+                                unsigned long threadNameEnd = (strstr(threadNameSearch, ")") - threadNameSearch)+1;
+                                if(threadNameEnd<255){
+                                    strncpy(arr_jthreads[cnt_threads].name, threadNameSearch, threadNameEnd);
+                                }else{
+                                    strncpy(arr_jthreads[cnt_threads].name, threadNameSearch, 255);
+                                }
                             }
-                            strcpy(arr_jthreads[cnt_threads].state, "U");
+                            strncpy(arr_jthreads[cnt_threads].state, "U", 9);
                             arr_jthreads[cnt_threads].pcpu=0.00;
                             arr_jthreads[cnt_threads].ccpu=0;
                             arr_jthreads[cnt_threads].minfault=0;
                             arr_jthreads[cnt_threads].majfault=0;
                             arr_jthreads[cnt_threads].secs=0;
-                            strcpy(arr_jthreads[cnt_threads].segv, "N");
+                            strncpy(arr_jthreads[cnt_threads].segv, "N", 1);
                             arr_jthreads[cnt_threads].rawcpu=0;
                             cnt_threads++;
                         }else{
                             // exclude the thread...
-                            strcpy(arr_ignore_threads[cnt_ignore_threads].pid, tasklist->d_name);
-                            cnt_ignore_threads++;
+                            if(cnt_ignore_threads<99){
+                                strncpy(arr_ignore_threads[cnt_ignore_threads].pid, tasklist->d_name, 9);
+                                cnt_ignore_threads++;
+                            }
                         }
                     }
                 }

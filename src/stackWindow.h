@@ -22,8 +22,8 @@
 #ifndef JTOP_STACKWINDOW_H
 #define JTOP_STACKWINDOW_H
 
-void printJavaStack(WINDOW *win_stack, int cnt_rows, char *stacklines[], int STACK_WIN_MAX_LINE);
-void printJavaThreadStack(WINDOW *win_stack, char *threadName, int cnt_rows, char *stacklines[], int STACK_WIN_MAX_LINE);
-int getLineJavaStack(int cnt_rows, char * srchString, char *stacklines[]);
+void printJavaStack();
+void printJavaThreadStack(WINDOW *win_stack, const char *threadName, char *stacklines[], int STACK_WIN_MAX_LINE);
+int getLineJavaStack(const char * srchString, char *stacklines[]);
 
 #endif //JTOP_STACKWINDOW_H

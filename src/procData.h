@@ -22,8 +22,8 @@
 #ifndef JTOP_PROCDATA_H
 #define JTOP_PROCDATA_H
 
-void getStat(char *javapid);
-void getStatus(char *javapid);
-void getNewThreads(char *javapid);
+void getStat(const char *javapid);
+void getStatus(const char *javapid);
+void getNewThreads(const char *javapid);
 
 #endif //JTOP_PROCDATA_H

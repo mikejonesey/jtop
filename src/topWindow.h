@@ -22,7 +22,7 @@
 #ifndef JTOP_TOPWINDOW_H
 #define JTOP_TOPWINDOW_H
 
-int printTop(WINDOW *topwindow, int thread_count, int STACK_WIN_MAX_COL);
+int printTop(int thread_count);
 void orderByCPU();
 void orderByBlocked();
 

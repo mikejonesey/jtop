@@ -5,7 +5,7 @@
 #include "classcpuWindow.h"
 #include "jtop.h"
 
-void updateClassInfo(int classccpu, char *ptr_classname){
+void updateClassInfo(int classccpu, const char *ptr_classname){
     int i = 0;
 
     // return if there is no class to track...
@@ -25,7 +25,7 @@ void updateClassInfo(int classccpu, char *ptr_classname){
     // add a new class to track...
     if(arr_class_cpu[i].className==NULL || arr_class_cpu[i].className[0] == '\0'){
         //new class deff...
-        strcpy(arr_class_cpu[i].className,ptr_classname);
+        strncpy(arr_class_cpu[i].className,ptr_classname,399);
         arr_class_cpu[i].totalcpu=classccpu;
     }
 }
@@ -43,7 +43,7 @@ void orderClassCPU(){
     }
 }
 
-void printClassCPU(WINDOW *win_classcpu){
+void printClassCPU(){
     orderClassCPU();
 
     int totalcpu=0;
@@ -57,14 +57,14 @@ void printClassCPU(WINDOW *win_classcpu){
         }
     }
 
-    mvwprintw(win_classcpu, 1, 1, "CPU By Class\n");
-    whline(win_classcpu, 0, 30);
+    mvwprintw(jtopWindows.win_ctop, 1, 1, "CPU By Class\n");
+    whline(jtopWindows.win_ctop, 0, 30);
 
     int i = 0;
     while(i<10 && arr_class_cpu[i].className && arr_class_cpu[i].className[0] != '\0'){
         //clear line...
-        wmove(win_classcpu, i+3, 1);
-        wclrtoeol(win_classcpu);
+        wmove(jtopWindows.win_ctop, i+3, 1);
+        wclrtoeol(jtopWindows.win_ctop);
 
         pct_cpu=arr_class_cpu[i].totalcpu*100/totalcpu;
 
@@ -75,18 +75,17 @@ void printClassCPU(WINDOW *win_classcpu){
         }
 
         //print line...
-        mvwprintw(win_classcpu, (i + 3), 1, "%d. %d%% %s", i+1, pct_cpu, arr_class_cpu[i].className);
+        mvwprintw(jtopWindows.win_ctop, (i + 3), 1, "%d. %d%% %s", i+1, pct_cpu, arr_class_cpu[i].className);
         i++;
 
     }
-    box(win_classcpu, 0, 0);
-    wrefresh(win_classcpu);
+    box(jtopWindows.win_ctop, 0, 0);
+    wrefresh(jtopWindows.win_ctop);
 }
 
-void printBlocks(WINDOW *win_classcpu){
-    mvwprintw(win_classcpu, 1, 1, "Threads blocked by: %s\n",arr_jthreads[topActiveRow].name);
-    whline(win_classcpu, 0, 30);
-    box(win_classcpu, 0, 0);
-
+void printBlocks(){
+    mvwprintw(jtopWindows.win_ctop, 1, 1, "Threads blocked by: %s\n",arr_jthreads[topActiveRow].name);
+    whline(jtopWindows.win_ctop, 0, 30);
+    box(jtopWindows.win_ctop, 0, 0);
 }
 

@@ -19,25 +19,34 @@
 
 #include "stackWindow.h"
 
-void printJavaStack(WINDOW *win_stack, int cnt_rows, char *stacklines[], int STACK_WIN_MAX_LINE){
-    bool filter_ok=true;
+void printJavaStack(){
     int printline=0;
-    for(int i=0; i<cnt_rows; i++){
-        if(printline>STACK_WIN_MAX_LINE-2){
+    int stacklines;
+    if(filterMode==false){
+        stacklines = javaThreadDump.cnt_stacklines;
+    }else{
+        stacklines = javaThreadDump.cnt_stacklines_filt;
+    }
+    for(int i=0; i<stacklines; i++){
+        if(printline>jtopWindows.STACK_WIN_MAX_LINE-2){
             break;
         }
         //clear line...
-        wmove(win_stack, printline+1, 1);
-        wclrtoeol(win_stack);
+        wmove(jtopWindows.win_stack, printline+1, 1);
+        wclrtoeol(jtopWindows.win_stack);
 
         //print line...
-        mvwprintw(win_stack, (printline + 1), 1, stacklines[i]);
+        if(filterMode==false){
+            mvwprintw(jtopWindows.win_stack, (printline + 1), 1, "%d: %s", i, javaThreadDump.arr_stacklines[i]);
+        }else{
+            mvwprintw(jtopWindows.win_stack, (printline + 1), 1, "%d: %s", i, javaThreadDump.arr_stacklines_filt[i]);
+        }
         printline++;
     }
-    wrefresh(win_stack);
+    wrefresh(jtopWindows.win_stack);
 }
 
-void printJavaThreadStack(WINDOW *win_stack, char *threadName, int cnt_rows, char *stacklines[], int STACK_WIN_MAX_LINE){
+void printJavaThreadStack(WINDOW *win_stack, const char *threadName, char *stacklines[], int STACK_WIN_MAX_LINE){
     int printline=0;
     if(strcmp(threadName,"New-thread")==0){
         while(printline<STACK_WIN_MAX_LINE) {
@@ -58,16 +67,11 @@ void printJavaThreadStack(WINDOW *win_stack, char *threadName, int cnt_rows, cha
 
     //vars
     bool thread_found=false;
-    bool filter_ok=true;
 
     //loop rows
-    for(int i=0; i<=cnt_rows; i++){
-        // check for max out
-        if(printline>STACK_WIN_MAX_LINE-2){
-            break;
-        }
+    for(int i=0; i<=javaThreadDump.cnt_stacklines; i++){
         // check for thread found
-        if(thread_found==false && i<cnt_rows){
+        if(thread_found==false && i<javaThreadDump.cnt_stacklines){
             if(strstr(stacklines[i],threadSearch)){
                 thread_found=true;
             }else{
@@ -75,8 +79,8 @@ void printJavaThreadStack(WINDOW *win_stack, char *threadName, int cnt_rows, cha
             }
         }
         // check for thread end or end of file
-        if(!stacklines[i] || strlen(stacklines[i])<2 || i>=cnt_rows-1){
-            while(printline<STACK_WIN_MAX_LINE){
+        if(!stacklines[i] || strlen(stacklines[i])<2 || i>=javaThreadDump.cnt_stacklines-1){
+            while(printline<STACK_WIN_MAX_LINE+2){
                 wmove(win_stack, printline+1, 1);
                 wclrtoeol(win_stack);
                 printline++;
@@ -88,15 +92,16 @@ void printJavaThreadStack(WINDOW *win_stack, char *threadName, int cnt_rows, cha
         wclrtoeol(win_stack);
 
         //print line...
-        mvwprintw(win_stack, (printline + 1), 1, stacklines[i]);
+        mvwprintw(jtopWindows.win_stack, (printline + 1), 1, "%d: %s", (i), javaThreadDump.arr_stacklines[i]);
+
         printline++;
     }
     wrefresh(win_stack);
 }
 
-int getLineJavaStack(int cnt_rows, char * srchString, char *stacklines[]){
+int getLineJavaStack(const char * srchString, char *stacklines[]){
     int printline=0;
-    for(int i=0; i<cnt_rows; i++){
+    for(int i=0; i<javaThreadDump.cnt_stacklines; i++){
         if(strstr(stacklines[i],srchString)){
             break;
         }
