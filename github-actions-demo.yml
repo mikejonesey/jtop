@@ -1,0 +1,31 @@
+# Dummy test Jenkinsfile to Github Actions, based on demo file
+name: Jtop Pipeline
+run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+on: [push]
+jobs:
+  build:
+    runs-on: gcc:8.4
+    steps:
+      - run: echo 'Checking out code...'
+      - name: Check out repository code
+        uses: actions/checkout@v1
+
+      - run: echo 'Building jtop'
+      - name: Update apt cache
+        run: |
+          apt-get update
+      - name: Install cmake
+        run: |
+          apt-get -y install cmake
+      - name: Create build dir
+        run: |
+          cmake -B ci-build
+      - name: Build the code
+        working-directory: ./ci-build
+        run: |
+          make
+      - name: List files in the build dir
+        run: |
+          ls ${{ github.workspace }}/ci-build
+      - run: echo "This job's status is ${{ job.status }}."
+
