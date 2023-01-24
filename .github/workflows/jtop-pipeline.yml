@@ -27,5 +27,12 @@ jobs:
       - name: List files in the build dir
         run: |
           ls ${{ github.workspace }}/ci-build
+
+      - name: Archive jtop binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: jtop x86_64 binary
+          path: ci-build/jtop
+                    
       - run: echo "This job's status is ${{ job.status }}."
 
