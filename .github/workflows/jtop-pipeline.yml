@@ -1,6 +1,6 @@
 # Dummy test Jenkinsfile to Github Actions, based on demo file
 name: Jtop Pipeline
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+run-name: ${{ github.actor }} is running jtop pipeline
 on: [push]
 jobs:
   build:
