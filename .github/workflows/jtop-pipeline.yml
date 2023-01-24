@@ -4,19 +4,19 @@ run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
 on: [push]
 jobs:
   build:
-    runs-on: gcc:8.4
+    runs-on: ubuntu-22.04
     steps:
       - run: echo 'Checking out code...'
       - name: Check out repository code
         uses: actions/checkout@v1
 
-      - run: echo 'Building jtop'
+      - run: echo 'Running jtop Pipeline...'
       - name: Update apt cache
         run: |
           apt-get update
       - name: Install cmake
         run: |
-          apt-get -y install cmake
+          apt-get -y install cmake gcc
       - name: Create build dir
         run: |
           cmake -B ci-build
