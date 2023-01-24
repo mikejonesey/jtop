@@ -35,6 +35,14 @@ static struct argp_option options[] = {
         {"verbose", 'v', 0,      0, "verbose mode."},
         {0}
 };
+struct jtopWindowObjects jtopWindows;
+struct struct_javaThreadDump javaThreadDump;
+unsigned int cntThreadRunning;
+unsigned int cntThreadWaiting;
+unsigned int cntThreadBlocked;
+struct class_cpu arr_class_cpu[10];
+struct ignore_thread arr_ignore_threads[100];
+struct jthread *vmthread;
 
 struct arguments {
     enum {

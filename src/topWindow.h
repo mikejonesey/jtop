@@ -17,13 +17,15 @@
  *  <http://www.gnu.org/licenses/>.
  */
 
-#include "jtop.h"
-
 #ifndef JTOP_TOPWINDOW_H
 #define JTOP_TOPWINDOW_H
+
+#include "jtop.h"
 
 int printTop(int thread_count);
 void orderByCPU();
 void orderByBlocked();
+//extern struct jtopWindowObjects;
+//extern struct jthread;
 
 #endif //JTOP_TOPWINDOW_H

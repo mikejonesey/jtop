@@ -124,28 +124,28 @@ struct struct_javaThreadDump{
 };
 
 //gvars
-struct jtopWindowObjects jtopWindows;
-struct struct_javaThreadDump javaThreadDump;
+extern struct jtopWindowObjects jtopWindows;
+extern struct struct_javaThreadDump javaThreadDump;
 
-int cnt_threads;
-int cnt_ignore_threads;
-int cnt_objects;
+extern int cnt_threads;
+extern int cnt_ignore_threads;
+extern int cnt_objects;
 
-unsigned int cntThreadRunning;
-unsigned int cntThreadWaiting;
-unsigned int cntThreadBlocked;
+extern unsigned int cntThreadRunning;
+extern unsigned int cntThreadWaiting;
+extern unsigned int cntThreadBlocked;
 
-struct jthread *vmthread;
-struct jthread arr_jthreads[10000];
-struct ignore_thread arr_ignore_threads[100];
-struct objectsync arr_objectsync[2000];
-struct class_cpu arr_class_cpu[10];
-int topActiveRow;
-bool threadControl;
-bool sleepMode;
-bool filterMode;
-int focusOn;
-int orderMode;
+extern struct jthread *vmthread;
+extern struct jthread arr_jthreads[10000];
+extern struct ignore_thread arr_ignore_threads[100];
+extern struct objectsync arr_objectsync[2000];
+extern struct class_cpu arr_class_cpu[10];
+extern int topActiveRow;
+extern bool threadControl;
+extern bool sleepMode;
+extern bool filterMode;
+extern int focusOn;
+extern int orderMode;
 
 //functions
 char *getJavaPid(char *javapid);

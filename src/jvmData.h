@@ -23,7 +23,7 @@
 #define JTOP_JVMDATA_H
 
 //var
-struct jthread *vmthread;
+extern struct jthread *vmthread;
 
 // func
 int hex2int(const char *hexin);

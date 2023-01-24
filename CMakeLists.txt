@@ -29,7 +29,7 @@ use_c99()
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${DESTDIR})
 
-set(SOURCE_FILES src/jtop.c src/jtop.h src/topWindow.c src/topWindow.h src/procData.c src/procData.h src/jvmData.c src/jvmData.h src/stackWindow.c src/stackWindow.h src/bufferFun.c src/bufferFun.h src/classcpuWindow.c src/classcpuWindow.h)
+set(SOURCE_FILES src/jtop.c src/jtop.h src/topWindow.c src/topWindow.h src/procData.c src/procData.h src/jvmData.c src/jvmData.h src/stackWindow.c src/stackWindow.h src/bufferFun.c src/bufferFun.h src/classcpuWindow.c src/classcpuWindow.h src/common.h)
 add_executable(jtop ${SOURCE_FILES})
 target_link_libraries(jtop ${CURSES_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 
