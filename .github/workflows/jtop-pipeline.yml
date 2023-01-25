@@ -74,8 +74,8 @@ jobs:
       #      --local dockerfile=. \
       #      --output type=image,name=${IMAGE_NAME},push=true
 
-      - name: Build and push
-        uses: docker/setup-buildx-action@v3
+      - name: Build and push Docker image
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
           driver-opts: image=moby/buildkit:v0.10.6
           context: .
